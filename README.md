@@ -17,6 +17,79 @@ Use hacs to install the package, add the config example for more usage see the `
 Setup the integration using the integrations page.
 
 
+### Zaptec concept
+
+Zaptec use three levels of abstractions in their EVCP setup.
+
+* Installation - This is the top-level entity and represents the entire site.
+* Circuit - An installation can have one or more (electrical) circuits. One circuit
+  have one common circuit breaker.
+* Charger - This is the actual EV charge point connected to a circuit. Each
+  circuit might have more than one charger.
+
+
+### Pause and resuming charging
+
+Pausing charging can be set by issuing the service `zaptec.stop_pause_charging`
+
+```yaml
+- service: zaptec.stop_pause_charging
+  data:
+    charger_id: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+```
+
+The charger ID can be read from the `ID` attrbute under the `zaptec_charger_*`
+entity.
+
+Resuming charging is done the same way:
+
+```yaml
+- service: zaptec.resume_charging
+  data:
+    charger_id: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+```
+
+### Set charge current
+
+The charge current can be set by issuing the service `zaptec.update_installation_1`.
+It sets the maximum current available on the _installation_ and will affect all
+circuits and chargers.
+
+```yaml
+- service: zaptec.update_installation_1
+  data:
+    installation_id: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+    available_current: 12
+```
+
+The installation ID can be found as the `ID` attribute under the
+entity named `zaptec_installation_*`.
+
+Please note that the Zaptec API docs warns against settings the current too
+frequest as charging cars might trigger an error if it changes too often. Once
+per 15 minutes is recommended.
+
+
+### Disable auto charge start
+
+Zaptec seems to start charging automatically when a charge ready EV is
+connected to a charger. This might not be wanted behavior if delayed start is
+wanted. The following trick will put the charger in _waiting_ mode and not
+start immediately:
+
+1. Set the available current to 0 (which must be done before the EV is
+   plugged in)
+2. Connect the EV
+3. When ready to charge, set the available current to the wanted value
+
+If the available current is set back to 0, the Zaptec will put the charge
+session into _finished_ mode. Thus setting of the available current is an
+effective way to start and stop the charging.
+
+Note that the avaialable acts on the entire installation. If you have multiple
+circuits and/or chargers, this will apply to all of them!
+
+
 [zaptec]: https://github.com/custom-components/zaptec
 [buymecoffee]: https://www.buymeacoffee.com/hellowlol1
 [buymecoffeebadge]: https://img.shields.io/badge/buy%20me%20a%20coffee-donate-yellow.svg?style=for-the-badge
