@@ -173,7 +173,7 @@ class Installation(ZapBase):
         data = await self._account.installation(self.id)
         self.set_attributes(data)
 
-    async def limit_amps(self, **kwargs):
+    async def limit_current(self, **kwargs):
         """Set a limit now how many amps the installation can use
 
         Use availableCurrent for 3phase
@@ -388,25 +388,17 @@ class Account:
             "Accept": "application/json",
         }
         full_url = API_URL + url
-        if method == "post":
-            header["Accept"] = "application/patch-json+json"
-            header["Content-Type"] = "application/patch-json+json"
-        # _LOGGER.debug("calling %s", full_url)
         try:
             async with async_timeout.timeout(30):
                 call = getattr(self._client, method)
                 if data is not None and method == "post":
-                    data = json.dumps(data)
-                    call = partial(call, data=data)
+                    call = partial(call, json=data)
                 async with call(full_url, headers=header) as resp:
                     if resp.status == 401:
                         await self._refresh_token()
                         return await self._request(url)
                     else:
-                        content = await resp.read()
-                        if not content:
-                            return None
-                        json_result = await resp.json()
+                        json_result = await resp.json(content_type=None)
                         # _LOGGER.debug(json.dumps(json_result, indent=4))
                         return json_result
 
