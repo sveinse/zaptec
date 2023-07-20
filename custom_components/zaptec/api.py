@@ -166,7 +166,7 @@ class Installation(ZapBase):
         data = await self._account.installation(self.id)
         self.set_attributes(data)
 
-    async def limit_amps(self, **kwargs):
+    async def limit_current(self, **kwargs):
         """Set a limit now how many amps the installation can use
 
         Use availableCurrent for 3phase
@@ -182,7 +182,7 @@ class Installation(ZapBase):
         ]
 
         keys = list(kwargs.keys())
-        if any(k for k in keys for i in phases) and total in keys:
+        if any(k for k in keys if k in phases) and total in keys:
             kwargs.pop("availableCurrent")
 
         return await self._account._request(
