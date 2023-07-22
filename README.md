@@ -1,4 +1,4 @@
-## zaptec charger custom component for home assistant
+## DEVELOPMENT zaptec charger custom component for home assistant
 
 [![GitHub Release][releases-shield]][releases]
 [![GitHub Activity][commits-shield]][commits]
@@ -10,6 +10,20 @@
 
 [![Discord][discord-shield]][discord]
 [![Community Forum][forum-shield]][forum]
+
+## WARNING: Development version
+
+**IMPORTANT!** This is https://github.com/sveinse/zaptec which is @sveinse's fork
+of upstream/official zaptec integration at https://github.com/custom-components/zaptec
+
+This repo can be installed manually into Home assistant by manually adding the URL
+in HACS:
+
+![Setup1](/img/hacs_custom.png)
+
+![Setup2](/img/hacs_zaptec_custom.png)
+
+
 
 ### Usage
 Use hacs to install the package, add the config example for more usage see the `lovelace_example`
