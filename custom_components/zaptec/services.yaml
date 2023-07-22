@@ -2,6 +2,7 @@ start_charging:
   description: "Starts charger. Also authorizes if configured to use authorization."
   fields:
     charger_id:
+      required: true
       description: "The charger id"
       example: "yyyyyyyy-9999-99xx-xxxx-yyyyyyyyyyyy"
 
@@ -9,6 +10,7 @@ stop_charging:
   description: "Starts charger. Also authorizes if configured to use authorization."
   fields:
     charger_id:
+      required: true
       description: "The charger id"
       example: "yyyyyyyy-9999-99xx-xxxx-yyyyyyyyyyyy"
 
@@ -16,6 +18,7 @@ stop_pause_charging:
   description: "New stop/pause"
   fields:
     charger_id:
+      required: true
       description: "The charger id"
       example: "yyyyyyyy-9999-99xx-xxxx-yyyyyyyyyyyy"
 
@@ -23,6 +26,7 @@ resume_charging:
   description: "New resume command."
   fields:
     charger_id:
+      required: true
       description: "The charger id"
       example: "yyyyyyyy-9999-99xx-xxxx-yyyyyyyyyyyy"
 
@@ -30,6 +34,7 @@ update_firmware:
   description: "New resume command."
   fields:
     charger_id:
+      required: true
       description: "Update the firmware."
       example: "yyyyyyyy-9999-99xx-xxxx-yyyyyyyyyyyy"
 
@@ -37,15 +42,20 @@ restart_charger:
   description: "Restart charger."
   fields:
     charger_id:
+      required: true
       description: "The charger id"
       example: "yyyyyyyy-9999-99xx-xxxx-yyyyyyyyyyyy"
 
-limit_amps:
+limit_current:
   description: "Update installation properties for 3 phases."
   fields:
     installation_id:
+      required: true
       description: "The installation id"
       example: "yyyyyyyy-9999-99xx-xxxx-yyyyyyyyyyyy"
+    available_current:
+      description: "The available current for all phases"
+      example: "16"
     available_current_phase1:
       description: "The available current for phase 1"
       example: "16"
