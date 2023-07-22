@@ -19,10 +19,14 @@ of upstream/official zaptec integration at https://github.com/custom-components/
 This repo can be installed manually into Home assistant by manually adding the URL
 in HACS:
 
+### Step 1
 ![Setup1](/img/hacs_custom.png)
 
+### Step 2
 ![Setup2](/img/hacs_zaptec_custom.png)
 
+### Step 3
+![Setup3](/img/hacs_zaptec_dev.png)
 
 
 ### Usage
