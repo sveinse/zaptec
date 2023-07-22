@@ -149,7 +149,7 @@ class InstallationSensor(Entity):
         return self._attrs["active"]
 
     @property
-    def should_pull(self):
+    def should_poll(self):
         return True
 
     async def async_update(self) -> None:
@@ -165,7 +165,7 @@ class ChargerSensor(Entity, ZapMixin):
         self._attrs = api._attrs
 
     @property
-    def should_pull(self):
+    def should_poll(self):
         return False
 
     @property

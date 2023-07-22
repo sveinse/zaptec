@@ -245,6 +245,8 @@ class Installation(ZapBase):
             receiver = servicebus_client.get_subscription_receiver(
                 topic_name=conf["Topic"], subscription_name=conf["Subscription"]
             )
+            # Store the receiver in order to close it and cancel this stream
+            self._receiver = receiver
             async with receiver:
                 async for msg in receiver:
                     await asyncio.sleep(0)
@@ -302,6 +304,7 @@ class Installation(ZapBase):
     async def cancel_stream(self):
         if self._stream_task is not None:
             try:
+                await self._receiver.close()
                 self._stream_task.cancel()
                 await self._stream_task
                 _LOGGER.debug("Canceled stream")
@@ -452,20 +455,28 @@ class Account:
 
         self.installs = cls_installs
 
-        device_types = []
+        # Will also report chargers listed in installation hierarchy above
         so_chargers = await self.chargers()
+
+        device_types = []
+        added_chargers = []
         for charger in so_chargers:
             if charger.id not in self.map:
                 self.map[charger.id] = charger
+
+                # Our charger is not listed in the hierarchy above this add
+                # this as a stand-alone
+                added_chargers.append(charger)
 
             # Append the device type in order to read the extended
             # IDs from the remap dict.
             device_types.append(charger.device_type)
 
-        self.stand_alone_chargers = so_chargers
+        self.stand_alone_chargers = added_chargers
 
         if not len(self.obs):
             self.obs = await _update_remaps(device_types)
+
 
 class Charger(ZapBase):
     def __init__(self, data, account):
