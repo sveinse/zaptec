@@ -1,5 +1,5 @@
 NAME = "zaptec"
-VERSION = "0.0.6b2"
+VERSION = "0.0.6b230722"
 ISSUEURL = "https://github.com/custom-components/zaptec/issues"
 
 STARTUP = """

@@ -51,12 +51,12 @@ Resuming charging is done the same way:
 
 ### Set charge current
 
-The charge current can be set by issuing the service `zaptec.update_installation_1`.
+The charge current can be set by issuing the service `zaptec.limit_current`.
 It sets the maximum current available on the _installation_ and will affect all
 circuits and chargers.
 
 ```yaml
-- service: zaptec.update_installation_1
+- service: zaptec.limit_current
   data:
     installation_id: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
     available_current: 12
