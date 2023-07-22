@@ -1,4 +1,4 @@
-## zaptec charger custom component for home assistant
+## DEVELOPMENT zaptec charger custom component for home assistant
 
 [![GitHub Release][releases-shield]][releases]
 [![GitHub Activity][commits-shield]][commits]
