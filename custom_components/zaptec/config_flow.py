@@ -35,6 +35,7 @@ class ZaptecFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         data_schema = {
             vol.Required("username", default=""): str,
             vol.Required("password", default=""): str,
+            vol.Required("use_uid", default=False): bool,
             vol.Optional("scan_interval", default=30): vol.Coerce(int),
         }
 
@@ -42,6 +43,7 @@ class ZaptecFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             "username": "firstname.lastname@gmail.com",
             "password": "your password",
             "scan_interval": 30,
+            "use_uid": False,
         }
 
         if user_input is not None:
@@ -56,6 +58,10 @@ class ZaptecFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 errors["base"] = "auth_failure"
 
             if valid_login:
+                unique_id = user_input["username"].lower()
+                await self.async_set_unique_id(unique_id)
+                self._abort_if_unique_id_configured()
+
                 return self.async_create_entry(
                     title=DOMAIN.capitalize(), data=user_input
                 )

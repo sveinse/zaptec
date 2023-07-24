@@ -12,7 +12,8 @@
                 "data":{
                     "username":"Username",
                     "password":"Password",
-                    "scan_interval":"Scan interval"
+                    "scan_interval":"Scan interval",
+                    "use_uid":"Use UID in entity names"
                 }
             }
         },

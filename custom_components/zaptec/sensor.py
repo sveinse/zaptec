@@ -16,21 +16,10 @@ _LOGGER = logging.getLogger(__name__)
 SCAN_INTERVAL = timedelta(seconds=60)
 
 
-async def _update_remaps() -> None:
-    wanted = ["Observations"]
-    async with aiohttp.request("GET", CONST_URL) as resp:
-        if resp.status == 200:
-            data = await resp.json()
-            for k, v in data.items():
-                if k in wanted:
-                    OBSERVATIONS_REMAPS.update(v)
-                    # Add names.
-                    OBSERVATIONS_REMAPS.update({value: key for key, value in v.items()})
-
-
 async def _dry_setup(hass, config, async_add_entities, discovery_info=None):
     sensors = []
     acc = hass.data[DOMAIN]["api"]
+    use_uid = config["use_uid"]
 
     async def cb(data):
         """Callback thats executed when a new message from the message bus is in."""
@@ -44,23 +33,22 @@ async def _dry_setup(hass, config, async_add_entities, discovery_info=None):
         # _LOGGER.debug("%s", vars(ins))
         for circuit in ins.circuits:
             # _LOGGER.debug("Building circuit %s", circuit)
-            c = CircuitSensor(circuit)
+            c = CircuitSensor(circuit, use_uid=use_uid)
             sensors.append(c)
             for charger in circuit.chargers:
                 # _LOGGER.debug("Building charger %s", charger)
                 # Force a update before its added.
                 await charger.state()
-                chs = ChargerSensor(charger, hass)
+                chs = ChargerSensor(charger, hass, use_uid=use_uid)
                 sensors.append(chs)
-        sensors.append(InstallationSensor(ins))
+        sensors.append(InstallationSensor(ins, use_uid=use_uid))
 
     for charger in acc.stand_alone_chargers:
         # _LOGGER.debug("Building charger %s", charger)
         # Force an update before its added.
         await charger.state()
-        chs = ChargerSensor(charger, hass)
+        chs = ChargerSensor(charger, hass, use_uid=use_uid)
         sensors.append(chs)
-
 
     async_add_entities(sensors, False)
 
@@ -85,13 +73,22 @@ class ZapMixin:
 
 
 class CircuitSensor(Entity):
-    def __init__(self, circuit):
+    def __init__(self, circuit, use_uid=False):
         self._api = circuit
         self._attrs = circuit._attrs
+        self._use_uid = use_uid
 
     @property
     def name(self) -> str:
-        return "zaptec_circuit_%s" % self._api._attrs["id"]
+        if self._use_uid:
+            ids = self._attrs["id"]
+            return "Zaptec Circuit %s" % ids
+        ids = self._attrs["name"]
+        return "%s Circuit" % ids
+
+    @property
+    def icon(self) -> str:
+        return "mdi:orbit"
 
     @property
     def extra_state_attributes(self) -> dict:
@@ -120,13 +117,22 @@ class CircuitSensor(Entity):
 
 
 class InstallationSensor(Entity):
-    def __init__(self, api):
+    def __init__(self, api, use_uid=False):
         self._api = api
         self._attrs = api._attrs
+        self._use_uid = use_uid
 
     @property
     def name(self) -> str:
-        return "zaptec_installation_%s" % self._attrs["id"]
+        if self._use_uid:
+            ids = self._attrs["id"]
+            return "Zaptec Installation %s" % ids
+        ids = self._attrs["name"]
+        return "%s Installation" % ids
+
+    @property
+    def icon(self) -> str:
+        return "mdi:home-lightning-bolt-outline"
 
     @property
     def extra_state_attributes(self) -> dict:
@@ -159,10 +165,11 @@ class InstallationSensor(Entity):
 
 
 class ChargerSensor(Entity, ZapMixin):
-    def __init__(self, api, hass) -> None:
+    def __init__(self, api, hass, use_uid=False) -> None:
         self._api = api
         self._hass = hass
         self._attrs = api._attrs
+        self._use_uid = use_uid
 
     @property
     def should_poll(self):
@@ -170,7 +177,12 @@ class ChargerSensor(Entity, ZapMixin):
 
     @property
     def name(self) -> str:
-        return f"zaptec_charger_{self._api.mid}".lower()
+        if self._use_uid:
+            ids = self._api.mid.lower()
+            return "Zaptec Charger %s" % ids
+        else:
+            ids = self._attrs["name"]
+            return str(ids)
 
     @property
     def icon(self) -> str:
