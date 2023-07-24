@@ -1,6 +1,7 @@
 import asyncio
 import inspect
 import logging
+import os
 
 import voluptuous as vol
 
@@ -23,6 +24,8 @@ has_limit_current_schema = vol.Schema(vol.SomeOf(min_valid=1, max_valid=1, valid
         vol.Required("available_current_phase3"): int,
     },
 ]))
+
+has_redacted_schema = vol.Schema({vol.Optional("redacted", default=True): bool})
 
 
 async def async_setup_services(hass):
@@ -81,6 +84,16 @@ async def async_setup_services(hass):
             )
         return await acc.map[installation_id].limit_current(availableCurrent=available_current)
 
+    async def service_handle_debug_data_dump(service_call):
+        _LOGGER.debug("debug data dump")
+        redacted = service_call.data["redacted"]
+        path = os.path.join(hass.config.config_dir, 'www', 'zaptec')
+        os.makedirs(path, exist_ok=True)
+        with open(os.path.join(path, 'debug.txt'), 'w') as f:
+            async for text in acc.data_dump(redacted=redacted):
+                f.write(text)
+        _LOGGER.warning("Dumped Zaptec debug info. Restart HA and download from <URL>/local/zaptec/debug.txt")
+
     hass.services.async_register(
         DOMAIN, "stop_pause_charging", service_handle_stop_pause, schema=has_id_schema
     )
@@ -107,4 +120,8 @@ async def async_setup_services(hass):
 
     hass.services.async_register(
         DOMAIN, "limit_current", service_handle_limit_current, schema=has_limit_current_schema
+    )
+
+    hass.services.async_register(
+        DOMAIN, "debug_data_dump", service_handle_debug_data_dump, schema=has_redacted_schema
     )

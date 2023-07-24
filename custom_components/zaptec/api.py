@@ -5,7 +5,7 @@ import random
 import re
 from concurrent.futures import CancelledError
 from functools import partial
-
+from pprint import pformat
 import aiohttp
 import async_timeout
 from azure.servicebus.aio import ServiceBusClient
@@ -30,24 +30,15 @@ signalr is used by the website.
 
 # to Support running this as a script.
 if __name__ == "__main__":
+    from const import API_URL, TOKEN_URL, CONST_URL
+    from misc import to_under, Redactor
+
     # remove me later
     logging.basicConfig(level=logging.DEBUG)
-    TOKEN_URL = "https://api.zaptec.com/oauth/token"
-    API_URL = "https://api.zaptec.com/api/"
-    CONST_URL = "https://api.zaptec.com/api/constants"
-
-    def to_under(word) -> str:
-        """helper to convert TurnOnThisButton to turn_on_this_button."""
-        # Ripped from inflection
-        word = re.sub(r"([A-Z]+)([A-Z][a-z])", r"\1_\2", word)
-        word = re.sub(r"([a-z\d])([A-Z])", r"\1_\2", word)
-        word = word.replace("-", "_")
-        return word.lower()
-
 
 else:
     from .const import API_URL, TOKEN_URL, CONST_URL
-    from .misc import to_under
+    from .misc import to_under, Redactor
 
 
 class AuthorizationFailedException(Exception):
@@ -75,6 +66,8 @@ async def _update_remaps(device_types=None) -> None:
                         if schema.get("DeviceType") in device_types and v2 is not None:
                             obs.update(v2)
                             obs.update({value: key for key, value in v2.items()})
+
+        _LOGGER.debug("Update remaps")
         return obs
 
 
@@ -477,6 +470,62 @@ class Account:
         if not len(self.obs):
             self.obs = await _update_remaps(device_types)
 
+    async def data_dump(self, redacted=True):
+        """ Debug API data dump """
+
+        # Helper to redact the output data
+        red = Redactor(redacted, self)
+
+        def gen_text(text, obj):
+            red.redact_obj_inplace(obj)
+            return f"\n{text}\n{'='*len(text)}\n{pformat(obj, width=200)}\n"
+
+        async def req(url):
+            try:
+                return await self._request(url)
+            except Exception as err:
+                return {"FAILED": str(err)}
+
+        # Fetch from API and generate output
+        # ----------------------------------
+
+        installations = await req("installation")
+        installation_ids = [inst['Id'] for inst in installations.get('Data',[])]
+        yield gen_text("Installation", installations)
+
+        chargers = await req("chargers")
+        charger_ids = [charger['Id'] for charger in chargers.get('Data',[])]
+        yield gen_text("Chargers", chargers)
+
+        circuit_ids = []
+        charger_in_circuits_ids = []
+        for inst_id in installation_ids:
+            hierarchy = await req(f"installation/{inst_id}/hierarchy")
+
+            for circuit in hierarchy.get('Circuits', []):
+                circuit_ids.append(circuit['Id'])
+                for charger in circuit.get('Chargers', []):
+                    charger_in_circuits_ids.append(charger['Id'])
+
+            yield gen_text(f"Hierarchy for {red.redact(inst_id)}", hierarchy)
+
+            installation = await req(f"installation/{inst_id}")
+            yield gen_text(f"Installation for {red.redact(inst_id)}", installation)
+
+        for circ_id in circuit_ids:
+            circuit = await req(f"circuits/{circ_id}")
+            yield gen_text(f"Circuit for {red.redact(circ_id)}", circuit)
+
+        for charger_id in set([*charger_ids, *charger_in_circuits_ids]):
+            charger = await req(f"chargers/{charger_id}")
+            yield gen_text(f"Charger for {red.redact(charger_id)}", charger)
+
+            state = await req(f"chargers/{charger_id}/state")
+            yield gen_text(f"Charger state for {red.redact(charger_id)}", state)
+
+            settings = await req(f"chargers/{charger_id}/settings")
+            yield gen_text(f"Charger settings for {red.redact(charger_id)}", settings)
+
 
 class Charger(ZapBase):
     def __init__(self, data, account):
@@ -652,21 +701,22 @@ if __name__ == "__main__":
         # Builds the interface.
         await acc.build()
 
-        async def cb(data):
-            pass
+        # async def cb(data):
+        #     _LOGGER.info("CB")
+        #     print(data)
 
-            _LOGGER.info("CB")
-            # print(data)
+        # for ins in acc.installs:
+        #     for circuit in ins.circuits:
+        #         data = await circuit.state()
+        #         print(data)
+        #     # await ins._stream(cb=cb)
 
-        for ins in acc.installs:
-            for circuit in ins.circuits:
-                data = await circuit.state()
-                print(data)
-            # await ins._stream(cb=cb)
+        # for charger in acc.stand_alone_chargers:
+        #     data = await charger.state()
+        #     print(data)
 
-        for charger in acc.stand_alone_chargers:
-            data = await charger.state()
-            print(data)
+        async for text in acc.data_dump(redacted=False):
+            print(text, end='')
 
         await acc._client.close()
 
