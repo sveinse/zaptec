@@ -1,16 +1,21 @@
+# pylint: disable=C0116
+
 import asyncio
 import logging
 from datetime import timedelta
 
 import aiohttp
-from homeassistant.components.sensor import PLATFORM_SCHEMA
-from homeassistant.helpers.dispatcher import (async_dispatcher_connect,
-                                              async_dispatcher_send)
-from homeassistant.helpers.entity import Entity
+from homeassistant.components.sensor import SensorEntity
+from homeassistant.const import STATE_UNAVAILABLE
+
+# from homeassistant.components.sensor import PLATFORM_SCHEMA
+from homeassistant.helpers.dispatcher import (
+    async_dispatcher_connect,
+    async_dispatcher_send,
+)
 from homeassistant.helpers.typing import ConfigType, HomeAssistantType
 
 from .const import *
-from .misc import to_under
 
 _LOGGER = logging.getLogger(__name__)
 SCAN_INTERVAL = timedelta(seconds=60)
@@ -19,36 +24,44 @@ SCAN_INTERVAL = timedelta(seconds=60)
 async def _dry_setup(hass, config, async_add_entities, discovery_info=None):
     sensors = []
     acc = hass.data[DOMAIN]["api"]
-    use_uid = config["use_uid"]
+    use_uid = config.get("use_uid", True)  # FIXME: How to deal with old behavior?
 
-    async def cb(data):
+    async def callback(data):
         """Callback thats executed when a new message from the message bus is in."""
         acc.update(data)
-        # Tell the sensor that htere is a update.
+        # Tell the sensor that there is an update.
         async_dispatcher_send(hass, EVENT_NEW_DATA)
 
+    # Not sure this should be added, lets see
+    hass.data[DOMAIN]["producer"].append(callback)
+
     for ins in acc.installs:
-        # _LOGGER.debug("Building install %s", ins._attrs)
-        await ins.stream(cb=cb)
-        # _LOGGER.debug("%s", vars(ins))
+        await ins.stream(cb=callback)
         for circuit in ins.circuits:
             # _LOGGER.debug("Building circuit %s", circuit)
-            c = CircuitSensor(circuit, use_uid=use_uid)
+            c = CircuitSensor(circuit, hass, use_uid=use_uid)
             sensors.append(c)
             for charger in circuit.chargers:
-                # _LOGGER.debug("Building charger %s", charger)
+                _LOGGER.debug("Building charger %s", charger.id)
                 # Force a update before its added.
                 await charger.state()
                 chs = ChargerSensor(charger, hass, use_uid=use_uid)
                 sensors.append(chs)
-        sensors.append(InstallationSensor(ins, use_uid=use_uid))
+        sensors.append(InstallationSensor(ins, hass, use_uid=use_uid))
 
     for charger in acc.stand_alone_chargers:
-        # _LOGGER.debug("Building charger %s", charger)
-        # Force an update before its added.
-        await charger.state()
-        chs = ChargerSensor(charger, hass, use_uid=use_uid)
-        sensors.append(chs)
+        _LOGGER.debug("charger %s", charger.id)
+        if charger.id in acc.map:
+            _LOGGER.debug(
+                "Skipping standalone charger %s as its already exists.", charger.id
+            )
+            continue
+        else:
+            # _LOGGER.debug("Building charger %s", charger)
+            # Force an update before its added.
+            await charger.state()
+            chs = ChargerSensor(charger, hass, use_uid=use_uid)
+            sensors.append(chs)
 
     async_add_entities(sensors, False)
 
@@ -57,7 +70,7 @@ async def _dry_setup(hass, config, async_add_entities, discovery_info=None):
 
 async def async_setup_platform(
     hass: HomeAssistantType, config: ConfigType, async_add_entities, discovery_info=None
-) -> None:
+) -> None:  # pylint: disable=W0613
     return True
 
 
@@ -66,16 +79,35 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
 
 
 class ZapMixin:
+    _attr_device_info = None
+    _attr_unique_id = None
+    _attr_has_entity_name = True
+    _attr_name = None
+    _attr_native_value = None
+
     async def _real_update(self):
-        _LOGGER.debug("Called _real_update")
+        _LOGGER.debug("Called _real_update for %s", self.__class__.__name__)
         # The api already updated and have new data available.
         self.async_write_ha_state()
 
+    async def async_added_to_hass(self):
+        """Connect to dispatcher listening for entity data notifications."""
+        await super().async_added_to_hass()
+        _LOGGER.debug("called async_added_to_hass %s", self.__class__.__name__)
+        self.async_on_remove(
+            async_dispatcher_connect(self._hass, EVENT_NEW_DATA, self._real_update)
+        )
 
-class CircuitSensor(Entity):
-    def __init__(self, circuit, use_uid=False):
+    @property
+    def should_pull(self):
+        return False
+
+
+class CircuitSensor(ZapMixin, SensorEntity):
+    def __init__(self, circuit, hass, use_uid=False):
         self._api = circuit
         self._attrs = circuit._attrs
+        self._hass = hass
         self._use_uid = use_uid
 
     @property
@@ -110,16 +142,12 @@ class CircuitSensor(Entity):
     def state(self):
         return self._attrs["active"]
 
-    async def async_update(self) -> None:
-        """Update the attributes"""
-        _LOGGER.debug("Called async_update on InstallationSensor")
-        await self._api._account.map[self._attrs["id"]].state()
 
-
-class InstallationSensor(Entity):
-    def __init__(self, api, use_uid=False):
+class InstallationSensor(ZapMixin, SensorEntity):
+    def __init__(self, api, hass, use_uid=False):
         self._api = api
         self._attrs = api._attrs
+        self._hass = hass
         self._use_uid = use_uid
 
     @property
@@ -154,26 +182,19 @@ class InstallationSensor(Entity):
     def state(self):
         return self._attrs["active"]
 
-    @property
-    def should_poll(self):
-        return True
-
     async def async_update(self) -> None:
         """Update the attributes"""
         _LOGGER.debug("Called async_update on InstallationSensor")
         await self._api._account.map[self._attrs["id"]].state()
 
 
-class ChargerSensor(Entity, ZapMixin):
+class ChargerSensor(ZapMixin, SensorEntity):
     def __init__(self, api, hass, use_uid=False) -> None:
         self._api = api
         self._hass = hass
         self._attrs = api._attrs
+        self._state = STATE_UNAVAILABLE
         self._use_uid = use_uid
-
-    @property
-    def should_poll(self):
-        return False
 
     @property
     def name(self) -> str:
@@ -190,19 +211,11 @@ class ChargerSensor(Entity, ZapMixin):
 
     @property
     def entity_picture(self) -> str:
-        return CHARGE_MODE_MAP[self._attrs["charger_operation_mode"]][1]
-
-    @property
-    def state(self) -> str:
-        try:
-            return CHARGE_MODE_MAP[self._attrs["charger_operation_mode"]][0]
-        except KeyError:
-            # This seems to happen when it starts up.
-            return "unknown"
+        return CHARGE_MODE_MAP[self._attrs["operating_mode"]][1]
 
     @property
     def unique_id(self):
-        return f"zaptec_{self._attrs['id']}".lower()
+        return f"{DOMAIN}_{self._attrs['id']}_chargers".lower()
 
     @property
     def device_info(self):
@@ -213,11 +226,21 @@ class ChargerSensor(Entity, ZapMixin):
         }
 
     @property
+    def state(self):
+        return self._state
+
+    @property
     def extra_state_attributes(self) -> dict:
         return self._attrs
 
-    async def async_added_to_hass(self):
-        """Connect to dispatcher listening for entity data notifications."""
-        await super().async_added_to_hass()
-        _LOGGER.debug("called async_added_to_hass %s", self.name)
-        async_dispatcher_connect(self._hass, EVENT_NEW_DATA, self._real_update)
+    async def _real_update(self):
+        _LOGGER.debug("Called _real_update for %s", self.__class__.__name__)
+        # The api already updated and have new data available.
+        try:
+            value = CHARGE_MODE_MAP[self._attrs["operating_mode"]][0]
+            self._state = value
+        except KeyError:
+            # This seems to happen when it starts up.
+            self._state = STATE_UNAVAILABLE
+
+        self.async_write_ha_state()
