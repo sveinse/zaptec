@@ -29,19 +29,11 @@ signalr is used by the website.
 
 # to Support running this as a script.
 if __name__ == "__main__":
+    from const import API_URL, CONST_URL, TOKEN_URL
+    from misc import to_under
+
     # remove me later
     logging.basicConfig(level=logging.DEBUG)
-    TOKEN_URL = "https://api.zaptec.com/oauth/token"
-    API_URL = "https://api.zaptec.com/api/"
-    CONST_URL = "https://api.zaptec.com/api/constants"
-
-    def to_under(word) -> str:
-        """helper to convert TurnOnThisButton to turn_on_this_button."""
-        # Ripped from inflection
-        word = re.sub(r"([A-Z]+)([A-Z][a-z])", r"\1_\2", word)
-        word = re.sub(r"([a-z\d])([A-Z])", r"\1_\2", word)
-        word = word.replace("-", "_")
-        return word.lower()
 
 else:
     from .const import API_URL, CONST_URL, TOKEN_URL
@@ -408,7 +400,7 @@ class Account:
         }
         full_url = API_URL + url
         try:
-            with async_timeout.timeout(30):
+            async with async_timeout.timeout(30):
                 call = getattr(self._client, method)
                 if data is not None and method == "post":
                     call = partial(call, json=data)
@@ -700,5 +692,7 @@ if __name__ == "__main__":
         for charger in acc.stand_alone_chargers:
             data = await charger.state()
             print(data)
+
+        await acc._client.close()
 
     asyncio.run(gogo())

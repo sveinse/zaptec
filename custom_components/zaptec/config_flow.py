@@ -56,6 +56,10 @@ class ZaptecFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 errors["base"] = "auth_failure"
 
             if valid_login:
+                unique_id = user_input["username"].lower()
+                await self.async_set_unique_id(unique_id)
+                self._abort_if_unique_id_configured()
+
                 return self.async_create_entry(
                     title=DOMAIN.capitalize(), data=user_input
                 )

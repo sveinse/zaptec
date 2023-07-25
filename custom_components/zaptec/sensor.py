@@ -21,18 +21,6 @@ _LOGGER = logging.getLogger(__name__)
 SCAN_INTERVAL = timedelta(seconds=60)
 
 
-async def _update_remaps() -> None:
-    wanted = ["Observations"]
-    async with aiohttp.request("GET", CONST_URL) as resp:
-        if resp.status == 200:
-            data = await resp.json()
-            for k, v in data.items():
-                if k in wanted:
-                    OBSERVATIONS_REMAPS.update(v)
-                    # Add names.
-                    OBSERVATIONS_REMAPS.update({value: key for key, value in v.items()})
-
-
 async def _dry_setup(hass, config, async_add_entities, discovery_info=None):
     sensors = []
     acc = hass.data[DOMAIN]["api"]
@@ -125,6 +113,10 @@ class CircuitSensor(ZapMixin, SensorEntity):
         return "zaptec_circuit_%s" % self._api._attrs["id"]
 
     @property
+    def icon(self) -> str:
+        return "mdi:orbit"
+
+    @property
     def extra_state_attributes(self) -> dict:
         return self._attrs
 
@@ -154,6 +146,10 @@ class InstallationSensor(ZapMixin, SensorEntity):
     @property
     def name(self) -> str:
         return "zaptec_installation_%s" % self._attrs["id"]
+
+    @property
+    def icon(self) -> str:
+        return "mdi:home-lightning-bolt-outline"
 
     @property
     def extra_state_attributes(self) -> dict:
