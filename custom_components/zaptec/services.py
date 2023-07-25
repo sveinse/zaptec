@@ -74,10 +74,10 @@ async def async_setup_services(hass):
     async def service_handle_limit_current(service_call):
         _LOGGER.debug("update current limit")
         installation_id = service_call.data["installation_id"]
+        available_current = service_call.data.get("available_current")
         available_current_phase1 = service_call.data.get("available_current_phase1")
         available_current_phase2 = service_call.data.get("available_current_phase2")
         available_current_phase3 = service_call.data.get("available_current_phase3")
-        available_current = service_call.data.get("available_current")
         return await acc.map[installation_id].limit_current(
             availableCurrent=available_current,
             availableCurrentPhase1=available_current_phase1,

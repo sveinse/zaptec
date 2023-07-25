@@ -182,11 +182,6 @@ class InstallationSensor(ZapMixin, SensorEntity):
     def state(self):
         return self._attrs["active"]
 
-    async def async_update(self) -> None:
-        """Update the attributes"""
-        _LOGGER.debug("Called async_update on InstallationSensor")
-        await self._api._account.map[self._attrs["id"]].state()
-
 
 class ChargerSensor(ZapMixin, SensorEntity):
     def __init__(self, api, hass, use_uid=False) -> None:
