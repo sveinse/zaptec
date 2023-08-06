@@ -1,8 +1,10 @@
-"""misc helper stuff"""
+"""Misc helper stuff."""
+from __future__ import annotations
+
 import re
 
 
-def to_under(word) -> str:
+def to_under(word: str) -> str:
     """helper to convert TurnOnThisButton to turn_on_this_button."""
     # Ripped from inflection
     word = re.sub(r"([A-Z]+)([A-Z][a-z])", r"\1_\2", word)
@@ -11,55 +13,86 @@ def to_under(word) -> str:
     return word.lower()
 
 
-class Redactor:
-    """ Class to handle redaction of sensitive data. """
+def mc_nbfx_decoder(msg: bytes) -> None:
+    """Decoder of .NET Binary Format XML Data structures."""
 
-    # Data fields that must be redacted from the output
-    REDACT_KEYS = [
-        "Address", "City", "Latitude", "Longitude", "ZipCode",
-        "Pin", "SerialNo", "LogoBase64",
-        "Id", "CircuitId", "DeviceId", "InstallationId", "MID", "ChargerId",
-        "Name", "InstallationName", "SignedMeterValue",
-    ]
+    # https://learn.microsoft.com/en-us/openspecs/windows_protocols/mc-nbfx
 
-    # Keys that will be looked up into the observer id dict
-    OBS_KEYS = [
-        "SettingId", "StateId"
-    ]
+    def data_producer(data: bytes):
+        """Generator of data."""
+        count = 0
+        while data:
+            block = data[:count]
+            data = data[count:]
+            count = (yield block)
 
-    def __init__(self, redacted, acc):
-        self.redacted = redacted
-        self.acc = acc
-        self.redacts = {}
+    prod = data_producer(msg)
+    next(prod)
 
-    def redact(self, text, make_new=False):
-        ''' Redact the text if it is present in the redacted dict.
-            A new redaction is created if make_new is True
-        '''
-        if not self.redacted:
-            return text
-        elif text in self.redacts:
-            return self.redacts[text]
-        elif make_new:
-            red = f"<--Redact #{len(self.redacts) + 1}-->"
-            self.redacts[text] = red
-            return red
-        return text
+    END_ELEMENT = 0x01
+    SHORT_XMLNS_ATTRIBUTE = 0x08
+    SHORT_ELEMENT = 0x40
+    CHARS8TEXT = 0x98
+    CHARS16TEXT = 0x9a
 
-    def redact_obj_inplace(self, obj):
-        ''' Iterate over obj and redact the fields. NOTE! This function
-            modifies the argument object in-place.
-        '''
-        if isinstance(obj, list):
-            for k in obj:
-                self.redact_obj_inplace(k)
-            return
-        elif not isinstance(obj, dict):
-            return
-        for k, v in obj.items():
-            if isinstance(v, (list, dict)):
-                self.redact_obj_inplace(v)
-                continue
-            if k in self.OBS_KEYS and v in self.acc.obs:
-                v = f"{v} ({self.acc.obs[v]})"
-            obj[k] = self.redact(v, make_new=k in self.REDACT_KEYS)
+    def read_string(bits16=False):
+        """Read a string."""
+        if bits16:
+            b = prod.send(2)
+            length = b[0] + (b[1] << 8)
+        else:
+            length = prod.send(1)[0]
+        return prod.send(length).decode("utf-8")
+
+    def frame_decoder():
+        """Decode the stream."""
+        while True:
+            try:
+                record_type = prod.send(1)[0]
+            except StopIteration:
+                return
+
+            if record_type in (
+                SHORT_ELEMENT, SHORT_XMLNS_ATTRIBUTE, CHARS8TEXT, CHARS16TEXT,
+            ):
+                yield record_type, read_string(bits16=(record_type == CHARS16TEXT))
+            elif record_type == END_ELEMENT:
+                yield record_type, None
+            else:
+                raise AttributeError(f"Unknown record type {hex(record_type)}")
+
+    root = []
+    frame = frame_decoder()
+    while True:
+        try:
+            record_type, text = next(frame)
+        except StopIteration:
+            return root
+
+        # Build the composite object
+        if record_type == SHORT_ELEMENT:
+            element = {}
+            element["name"] = text
+            root.append(element)
+            while True:
+                record_type, text = next(frame)
+                if record_type == SHORT_XMLNS_ATTRIBUTE:
+                    element["xmlns"] = text
+                elif record_type in (CHARS8TEXT, CHARS16TEXT):
+                    element["text"] = text
+                elif record_type == END_ELEMENT:
+                    break
+                else:
+                    raise AttributeError(f"Unknown record type {hex(record_type)}")
+        else:
+            raise AttributeError(f"Unknown record type {hex(record_type)}")
+
+
+if __name__ == "__main__":
+    from pprint import pprint
+
+    data = b'@\x06string\x083http://schemas.microsoft.com/2003/10/Serialization/\x98\xa5{"DeviceId":"ZAP000000","DeviceType":4,"ChargerId":"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx","StateId":523,"Timestamp":"2023-07-28T09:07:19.23","ValueAsString":"0.000"}\x01'
+    data = b'@\x06string\x083http://schemas.microsoft.com/2003/10/Serialization/\x9a\x87\x01{"DeviceId":"ZAP000000","DeviceType":4,"ChargerId":"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx","StateId":554,"Timestamp":"2023-08-03T00:00:00.0617Z","ValueAsString":"OCMF|{\\"FV\\":\\"1.0\\",\\"GI\\":\\"ZAPTEC GO\\",\\"GS\\":\\"ZAP000000\\",\\"GV\\":\\"2.1.0.4\\",\\"PG\\":\\"F1\\",\\"RD\\":[{\\"TM\\":\\"2023-08-03T00:00:00,000+00:00 R\\",\\"RV\\":179.715,\\"RI\\":\\"1-0:1.8.0\\",\\"RU\\":\\"kWh\\",\\"RT\\":\\"AC\\",\\"ST\\":\\"G\\"}]}"}\x01'
+
+    out = mc_nbfx_decoder(data)
+    pprint(out)

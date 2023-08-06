@@ -1,7 +1,7 @@
 {
   "domain": "zaptec",
   "name": "zaptec",
-  "documentation": "https://github.com/custom-components/zaptec",
+  "documentation": "https://github.com/sveinse/zaptec",
   "dependencies": [],
   "config_flow": true,
   "codeowners": [
@@ -9,5 +9,5 @@
     "sveinse"
   ],
   "requirements": ["azure-servicebus"],
-  "version": "0.0.6b230725"
+  "version": "0.0.6b230807"
 }

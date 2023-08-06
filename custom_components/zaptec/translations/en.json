@@ -12,13 +12,37 @@
                 "data":{
                     "username":"Username",
                     "password":"Password",
-                    "scan_interval":"Scan interval",
-                    "use_uid":"Use UID in entity names"
+                    "scan_interval":"Scan interval"
                 }
             }
         },
         "abort":{
             "single_instance_allowed":"Only a single instance is allowed."
+        }
+    },
+    "entity": {
+        "sensor": {
+            "max_current": { "name": "Max Current" },
+            "charger_operation_mode": { "name": "Charger Operation Mode" }
+        },
+        "number": {
+            "available_current": { "name": "Available Current" },
+            "available_current_phase1": { "name": "Available Current Phase 1" },
+            "available_current_phase2": { "name": "Available Current Phase 2" },
+            "available_current_phase3": { "name": "Available Current Phase 3" }
+        },
+        "binary_sensor": {
+            "is_authorization_required": { "name": "Authorization Required" },
+            "permanent_cable_lock": { "name": "Permanent Cable Lock" }
+        },
+        "button": {
+            "resume_charging": { "name": "Resume Charging" },
+            "stop_pause": { "name": "Stop/Pause Charging" },
+            "restart_charger": { "name": "Restart Charger" },
+            "update_firmware": { "name": "Update Firmware" }
+        },
+        "switch": {
+            "charging": { "name": "Charging" }
         }
     }
 }

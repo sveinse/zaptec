@@ -1,9 +1,14 @@
+"""Zaptec components services."""
+from __future__ import annotations
+
 import asyncio
 import logging
 import os
 
 import voluptuous as vol
+from homeassistant.core import HomeAssistant, ServiceCall
 
+from .api import Account
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
@@ -30,48 +35,48 @@ has_limit_current_schema = vol.Schema(vol.SomeOf(
 has_redacted_schema = vol.Schema({vol.Optional("redacted", default=True): bool})
 
 
-async def async_setup_services(hass):
+async def NO_async_setup_services(hass: HomeAssistant) -> None:
     """Set up services for the Plex component."""
 
-    acc = hass.data[DOMAIN]["api"]
-    _LOGGER.debug("Setting up services.")
+    _LOGGER.debug("Set up services")
+    acc: Account = hass.data[DOMAIN]["api"]
 
     # just the new one for now.
     # #  require firmware > 3.2
-    async def service_handle_stop_pause(service_call):
+    async def service_handle_stop_pause(service_call: ServiceCall) -> None:
         _LOGGER.debug("called new stop pause")
         charger_id = service_call.data["charger_id"]
-        return await acc.map[charger_id].stop_pause()
+        return await acc.map[charger_id].command("stop_pause")
 
-    async def service_handle_resume_charging(service_call):
+    async def service_handle_resume_charging(service_call: ServiceCall) -> None:
         _LOGGER.debug("service new start and or resume")
         charger_id = service_call.data["charger_id"]
-        return await acc.map[charger_id].resume_charging()
+        return await acc.map[charger_id].command("resume_charging")
 
     # Add old one to see if they even work.
-    async def service_handle_start_charging(service_call):
+    async def service_handle_start_charging(service_call: ServiceCall) -> None:
         _LOGGER.debug("service old start")
         charger_id = service_call.data["charger_id"]
         cmd = f"chargers/{charger_id}/SendCommand/501"
         return await acc._request(cmd, method="post")
 
-    async def service_handle_stop_charging(service_call):
+    async def service_handle_stop_charging(service_call: ServiceCall) -> None:
         _LOGGER.debug("service old stop")
         charger_id = service_call.data["charger_id"]
         cmd = f"chargers/{charger_id}/SendCommand/502"
         return await acc._request(cmd, method="post")
 
-    async def service_handle_restart_charger(service_call):
+    async def service_handle_restart_charger(service_call: ServiceCall) -> None:
         _LOGGER.debug("service restart_charger")
         charger_id = service_call.data["charger_id"]
-        return await acc.map[charger_id].restart_charger()
+        return await acc.map[charger_id].command("restart_charger")
 
-    async def service_handle_update_firmware(service_call):
+    async def service_handle_update_firmware(service_call: ServiceCall) -> None:
         _LOGGER.debug("service update_firmware")
         charger_id = service_call.data["charger_id"]
         return await acc.map[charger_id].update_firmware()
 
-    async def service_handle_limit_current(service_call):
+    async def service_handle_limit_current(service_call: ServiceCall) -> None:
         _LOGGER.debug("update current limit")
         installation_id = service_call.data["installation_id"]
         available_current = service_call.data.get("available_current")
@@ -85,7 +90,7 @@ async def async_setup_services(hass):
             availableCurrentPhase3=available_current_phase3,
         )
 
-    async def service_handle_debug_data_dump(service_call):
+    async def service_handle_debug_data_dump(service_call: ServiceCall) -> None:
         _LOGGER.debug("debug data dump")
         redacted = service_call.data["redacted"]
         path = os.path.join(hass.config.config_dir, 'www', 'zaptec')

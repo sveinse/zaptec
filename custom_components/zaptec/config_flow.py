@@ -1,4 +1,6 @@
 """Adds config flow for zaptec."""
+from __future__ import annotations
+
 import http
 import logging
 
@@ -35,7 +37,6 @@ class ZaptecFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         data_schema = {
             vol.Required("username", default=""): str,
             vol.Required("password", default=""): str,
-            vol.Required("use_uid", default=False): bool,
             vol.Optional("scan_interval", default=30): vol.Coerce(int),
         }
 
@@ -43,7 +44,6 @@ class ZaptecFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             "username": "firstname.lastname@gmail.com",
             "password": "your password",
             "scan_interval": 30,
-            "use_uid": False,
         }
 
         if user_input is not None:
