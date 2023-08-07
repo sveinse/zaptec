@@ -9,5 +9,5 @@
     "sveinse"
   ],
   "requirements": ["azure-servicebus"],
-  "version": "0.0.6b230723"
+  "version": "0.0.6b230725"
 }

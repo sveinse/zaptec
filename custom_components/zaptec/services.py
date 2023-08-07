@@ -1,6 +1,6 @@
 import asyncio
-import inspect
 import logging
+import os
 
 import voluptuous as vol
 
@@ -11,7 +11,10 @@ _LOGGER = logging.getLogger(__name__)
 
 has_id_schema = vol.Schema({vol.Required("charger_id"): str})
 
-has_limit_current_schema = vol.Schema(vol.SomeOf(min_valid=1, max_valid=1, validators=[
+has_limit_current_schema = vol.Schema(vol.SomeOf(
+    min_valid=1, max_valid=1, msg="Must specify either only available_current or all "
+    "three available_current_phaseX (where X is 1-3). They are mutually exclusive",
+    validators=[
     {
         vol.Required("installation_id"): str,
         vol.Required("available_current"): int,
@@ -23,6 +26,8 @@ has_limit_current_schema = vol.Schema(vol.SomeOf(min_valid=1, max_valid=1, valid
         vol.Required("available_current_phase3"): int,
     },
 ]))
+
+has_redacted_schema = vol.Schema({vol.Optional("redacted", default=True): bool})
 
 
 async def async_setup_services(hass):
@@ -73,13 +78,22 @@ async def async_setup_services(hass):
         available_current_phase1 = service_call.data.get("available_current_phase1")
         available_current_phase2 = service_call.data.get("available_current_phase2")
         available_current_phase3 = service_call.data.get("available_current_phase3")
-        if available_current_phase1 is not None:
-            return await acc.map[installation_id].limit_current(
-                availableCurrentPhase1=available_current_phase1,
-                availableCurrentPhase2=available_current_phase2,
-                availableCurrentPhase3=available_current_phase3
-            )
-        return await acc.map[installation_id].limit_current(availableCurrent=available_current)
+        return await acc.map[installation_id].limit_current(
+            availableCurrent=available_current,
+            availableCurrentPhase1=available_current_phase1,
+            availableCurrentPhase2=available_current_phase2,
+            availableCurrentPhase3=available_current_phase3,
+        )
+
+    async def service_handle_debug_data_dump(service_call):
+        _LOGGER.debug("debug data dump")
+        redacted = service_call.data["redacted"]
+        path = os.path.join(hass.config.config_dir, 'www', 'zaptec')
+        os.makedirs(path, exist_ok=True)
+        with open(os.path.join(path, 'debug.txt'), 'w') as f:
+            async for text in acc.data_dump(redacted=redacted):
+                f.write(text)
+        _LOGGER.warning("Dumped Zaptec debug info. Restart HA and download from <URL>/local/zaptec/debug.txt")
 
     hass.services.async_register(
         DOMAIN, "stop_pause_charging", service_handle_stop_pause, schema=has_id_schema
@@ -107,4 +121,8 @@ async def async_setup_services(hass):
 
     hass.services.async_register(
         DOMAIN, "limit_current", service_handle_limit_current, schema=has_limit_current_schema
+    )
+
+    hass.services.async_register(
+        DOMAIN, "debug_data_dump", service_handle_debug_data_dump, schema=has_redacted_schema
     )

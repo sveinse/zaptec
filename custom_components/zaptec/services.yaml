@@ -47,14 +47,14 @@ restart_charger:
       example: "yyyyyyyy-9999-99xx-xxxx-yyyyyyyyyyyy"
 
 limit_current:
-  description: "Update installation properties for 3 phases."
+  description: "Update available current for the installation."
   fields:
     installation_id:
       required: true
       description: "The installation id"
       example: "yyyyyyyy-9999-99xx-xxxx-yyyyyyyyyyyy"
     available_current:
-      description: "The available current for all phases"
+      description: "The available current for all phases. Cannot be used together with any available_current_phase* fields"
       example: "16"
     available_current_phase1:
       description: "The available current for phase 1"
@@ -65,3 +65,10 @@ limit_current:
     available_current_phase3:
       description: "The available current for phase 3"
       example: "16"
+
+debug_data_dump:
+  description: "Dump RAW data from the zaptec API."
+  fields:
+    redacted:
+      required: false
+      description: "Redact sensitive data"
