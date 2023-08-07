@@ -63,12 +63,33 @@ CIRCUIT_ENTITIES: list[EntityDescription] = [
 
 CHARGER_ENTITIES: list[EntityDescription] = [
     ZapSensorEntityDescription(
-        key="charger_operation_mode",
-        translation_key="charger_operation_mode",
+        key="operating_mode",
+        translation_key="operating_mode",
         device_class=SensorDeviceClass.ENUM,
         options=[x[0] for x in CHARGE_MODE_MAP.values()],
         icon="mdi:ev-station",
         cls=ZaptecChargeSensor,
+    ),
+    ZapSensorEntityDescription(
+        key="current_phase1",
+        translation_key="current_phase1",
+        device_class=SensorDeviceClass.CURRENT,
+        icon="mdi:current-ac",
+        native_unit_of_measurement=const.UnitOfElectricCurrent.AMPERE,
+    ),
+    ZapSensorEntityDescription(
+        key="current_phase2",
+        translation_key="current_phase2",
+        device_class=SensorDeviceClass.CURRENT,
+        icon="mdi:current-ac",
+        native_unit_of_measurement=const.UnitOfElectricCurrent.AMPERE,
+    ),
+    ZapSensorEntityDescription(
+        key="current_phase3",
+        translation_key="current_phase3",
+        device_class=SensorDeviceClass.CURRENT,
+        icon="mdi:current-ac",
+        native_unit_of_measurement=const.UnitOfElectricCurrent.AMPERE,
     ),
 ]
 
