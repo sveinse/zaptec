@@ -31,7 +31,7 @@ class ZaptecButton(ZaptecBaseEntity, ButtonEntity):
             self.zaptec_obj.id
         )
 
-        key = self.description.key
+        key = self.entity_description.key
         charger: Charger = self.zaptec_obj
 
         try:
@@ -62,6 +62,16 @@ CHARGER_ENTITIES: list[EntityDescription] = [
         key="stop_pause",
         translation_key="stop_pause",
         icon="mdi:pause-circle-outline",
+    ),
+    ZapButtonEntityDescription(
+        key="authorize_charge",
+        translation_key="authorize_charge",
+        icon="mdi:lock-check-outline"
+    ),
+    ZapButtonEntityDescription(
+        key="deauthorize_stop",
+        translation_key="deauthorize_stop",
+        icon="mdi:lock-remove-outline"
     ),
     ZapButtonEntityDescription(
         key="restart_charger",

@@ -233,7 +233,7 @@ class Installation(ZaptecBase):
 
                             # Decode MC-NBFX message
                             obj = mc_nbfx_decoder(binmsg)
-                            # _LOGGER.debug("Decoded XML message %s", obj)
+                            _LOGGER.debug("---   Subscription: %s", obj)
 
                             # Convert the json payload
                             json_result = json.loads(obj[0]["text"])
@@ -394,12 +394,23 @@ class Charger(ZaptecBase):
             "combined_min": 10000,
             "deauthorize_stop": 10001,
             "combined_max": 10999,
+            "authorize_charge": None,
         }
+
+        if command == "authorize_charge":
+            data = await self._account._request(f"chargers/{self.id}/authorizecharge", method="post")
+            # FIXME: Verify assumed data structure
+            return data
 
         if command not in COMMANDS:
             raise ValueError(f"Unknown command {command}")
+
         _LOGGER.debug("Command %s", command)
-        return await self._send_command(COMMANDS[command])
+        cmd = f"chargers/{self.id}/SendCommand/{COMMANDS[command]}"
+        _LOGGER.debug("Calling %s", cmd)
+        data = await self._account._request(cmd, method="post")
+        # FIXME: Verify assumed data structure
+        return data
 
     async def live(self):
         # This don't seems to be documented but the portal uses it
@@ -411,13 +422,6 @@ class Charger(ZaptecBase):
     async def settings(self):
         # TODO check what it returns and parse it to attributes
         data = await self._account._request("chargers/%s/settings" % self.id)
-        # FIXME: Verify assumed data structure
-        return data
-
-    async def _send_command(self, id_):
-        cmd = "chargers/%s/SendCommand/%s" % (self.id, id_)
-        _LOGGER.debug("Calling %s", cmd)
-        data = await self._account._request(cmd, method="post")
         # FIXME: Verify assumed data structure
         return data
 
