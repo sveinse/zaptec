@@ -56,8 +56,6 @@ CHARGER_ENTITIES: list[EntityDescription] = [
     ZapButtonEntityDescription(
         key="resume_charging",
         translation_key="resume_charging",
-        # name="Charger",
-        # device_class=ButtonDeviceClass.CONNECTIVITY,
         icon="mdi:play-circle-outline",
     ),
     ZapButtonEntityDescription(

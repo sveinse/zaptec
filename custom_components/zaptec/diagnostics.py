@@ -87,7 +87,7 @@ class Redactor:
                 continue
             obj[k] = self.redact(v, make_new=k if k in self.REDACT_KEYS else None, ctx=ctx)
         return obj
-    
+
     def redact_statelist(self, objs, ctx=None):
         '''Redact the special state list objects.'''
         for obj in objs:

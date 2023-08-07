@@ -1,6 +1,6 @@
 {
   "domain": "zaptec",
-  "name": "zaptec",
+  "name": "zaptec-dev",
   "documentation": "https://github.com/sveinse/zaptec",
   "dependencies": [],
   "config_flow": true,

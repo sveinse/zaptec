@@ -1,9 +1,9 @@
 """Zaptec integration constants."""
 from __future__ import annotations
 
-NAME = "zaptec"
-VERSION = "0.0.6b2"
-ISSUEURL = "https://github.com/custom-components/zaptec/issues"
+NAME = "zaptec-dev"
+VERSION = "0.0.6b230807"
+ISSUEURL = "https://github.com/sveinse/zaptec/issues"
 
 STARTUP = """
 -------------------------------------------------------------------
@@ -31,7 +31,6 @@ CHARGE_MODE_MAP = {
 TOKEN_URL = "https://api.zaptec.com/oauth/token"
 API_URL = "https://api.zaptec.com/api/"
 CONST_URL = "https://api.zaptec.com/api/constants"
-
 
 CONF_SENSOR = "sensor"
 CONF_SWITCH = "switch"

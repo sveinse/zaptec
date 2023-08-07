@@ -75,7 +75,7 @@ CHARGER_ENTITIES: list[EntityDescription] = [
     ZapBinarySensorEntityDescription(
         key="active",
         name="Charger",
-        device_class=BinarySensorDeviceClass.CONNECTIVITY,
+        device_class=BinarySensorDeviceClass.CONNECTIVITY,  # False=disconnected, True=connected
         entity_category=const.EntityCategory.DIAGNOSTIC,
         icon="mdi:ev-station",
         has_entity_name=False,
@@ -84,7 +84,7 @@ CHARGER_ENTITIES: list[EntityDescription] = [
     ZapBinarySensorEntityDescription(
         key="is_authorization_required",
         translation_key="is_authorization_required",
-        device_class=BinarySensorDeviceClass.LOCK,
+        device_class=BinarySensorDeviceClass.LOCK,  # False=unlocked, True=locked
         entity_category=const.EntityCategory.DIAGNOSTIC,
         icon="mdi:lock",
         cls=ZaptecBinarySensorLock,
@@ -92,7 +92,7 @@ CHARGER_ENTITIES: list[EntityDescription] = [
     ZapBinarySensorEntityDescription(
         key="permanent_cable_lock",
         translation_key="permanent_cable_lock",
-        device_class=BinarySensorDeviceClass.LOCK,
+        device_class=BinarySensorDeviceClass.LOCK,  # False=unlocked, True=locked
         entity_category=const.EntityCategory.DIAGNOSTIC,
         icon="mdi:lock",
         cls=ZaptecBinarySensorLock,
