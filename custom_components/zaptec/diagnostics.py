@@ -17,7 +17,7 @@ DO_REDACT = True
 
 # If this is set to True, the redacted data will be included in the output.
 # USE WITH CAUTION! This will include sensitive data in the output.
-INCLUDE_REDACTS = True
+INCLUDE_REDACTS = False
 
 class Redactor:
     """ Class to handle redaction of sensitive data. """

@@ -137,23 +137,20 @@ class Installation(ZaptecBase):
 
     async def limit_current(self, **kwargs):
         """Set a limit now how many amps the installation can use
-
-        Use availableCurrent for 3phase
-        use just select the phase you want to use.
+        Use availableCurrent for setting all phases at once. Use 
+        availableCurrentPhase* to set each phase individually.
         """
-        total = "availableCurrent"
-        phases = [
-            "availableCurrentPhase1",
-            "availableCurrentPhase2",
-            "availableCurrentPhase3",
-        ]
+        has_availablecurrent = "availableCurrent" in kwargs
+        has_availablecurrentphases = all(
+            k in kwargs for k in (
+              "availableCurrentPhase1",
+              "availableCurrentPhase2",
+              "availableCurrentPhase3",
+            )
+        )
 
-        # If any of the phases are present and not None, remove the total field.
-        if any(k and v is not None
-               for k, v in kwargs.items()
-               if k in phases
-               ):
-            kwargs.pop(total, None)
+        if not (has_availablecurrent ^ has_availablecurrentphases):
+            raise ValueError("Either availableCurrent or all of availableCurrentPhase1, availableCurrentPhase2, availableCurrentPhase3 must be set")
 
         data = await self._account._request(
             f"installation/{self.id}/update", method="post", data=kwargs
@@ -394,16 +391,16 @@ class Charger(ZaptecBase):
             "combined_min": 10000,
             "deauthorize_stop": 10001,
             "combined_max": 10999,
-            "authorize_charge": None,
+            "authorize_charge": None,  # Special case
         }
+
+        if command not in COMMANDS:
+            raise ValueError(f"Unknown command {command}")
 
         if command == "authorize_charge":
             data = await self._account._request(f"chargers/{self.id}/authorizecharge", method="post")
             # FIXME: Verify assumed data structure
             return data
-
-        if command not in COMMANDS:
-            raise ValueError(f"Unknown command {command}")
 
         _LOGGER.debug("Command %s", command)
         cmd = f"chargers/{self.id}/SendCommand/{COMMANDS[command]}"

@@ -5,6 +5,7 @@
 User:
 * Added buttons "Authorize charging", "Deauthorize Charging"
 * Added sensors "Current phase 1,2,3"
+* Added service "authorized_charging" and "deauthorize_charging"
 
 Technical:
 * Fixed up api.Charger.command() and removed _send_command()
@@ -25,5 +26,5 @@ Major refactoring
 User:
 * Zaptec devices (installation, circuit and charger) are named as set in Zaptec portal
 * More entities for each device. Avoid using attrs and templates.
-* Services replaced by buttons and number actions
+* Added buttons and number actions as alternatives to services
 * Added "Download diagnostics"
