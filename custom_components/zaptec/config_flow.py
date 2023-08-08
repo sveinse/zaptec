@@ -8,7 +8,7 @@ import aiohttp
 import voluptuous as vol
 from homeassistant import config_entries
 
-from .api import Account, AuthorizationFailedException
+from .api import Account, AuthorizationError
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
@@ -54,7 +54,7 @@ class ZaptecFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 )
             except aiohttp.ClientConnectorError:
                 errors["base"] = "connection_failure"
-            except AuthorizationFailedException:
+            except AuthorizationError:
                 errors["base"] = "auth_failure"
 
             if valid_login:

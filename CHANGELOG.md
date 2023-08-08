@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.6b230809
+
+* Add exceptions in API
+* Fix exception handling in Account._request
+* Limit number of authentication failed retries before giving up
+
 ## 0.0.6b230808
 
 User:

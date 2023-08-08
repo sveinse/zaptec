@@ -31,7 +31,8 @@ signalr is used by the website.
 
 # to Support running this as a script.
 if __name__ == "__main__":
-    from const import API_URL, CONST_URL, FALSY, MISSING, TOKEN_URL, TRUTHY
+    from const import (API_RETRIES, API_URL, CONST_URL, FALSY, MISSING,
+                       TOKEN_URL, TRUTHY)
     from misc import mc_nbfx_decoder, to_under
 
     # remove me later
@@ -39,31 +40,25 @@ if __name__ == "__main__":
     logging.getLogger("azure").setLevel(logging.WARNING)
 
 else:
-    from .const import API_URL, CONST_URL, FALSY, MISSING, TOKEN_URL, TRUTHY
+    from .const import (API_RETRIES, API_URL, CONST_URL, FALSY, MISSING,
+                        TOKEN_URL, TRUTHY)
     from .misc import mc_nbfx_decoder, to_under
 
 
-class AuthorizationFailedException(Exception):
-    pass
+class ZaptecApiError(Exception):
+    '''Base exception for all Zaptec API errors'''
 
 
-def convert(data: Iterable[dict[str, str]], key: str, keydict: dict[str, str]):
-    # FIXME: Implement this more elegant into Account
+class AuthorizationError(ZaptecApiError):
+    '''Authenatication failed'''
 
-    out = {}
-    for item in data:
-        skey = item.get(key)
-        if skey is None:
-            _LOGGER.debug("Missing key %s in %s", key, item)
-            continue
-        value = item.get("Value", item.get("ValueAsString", MISSING))
-        if value is not MISSING:
-            kv = keydict.get(skey, f"{key} {skey}")
-            if kv in out:
-                _LOGGER.debug("Duplicate key %s. Is '%s', new '%s'", kv, out[kv], value)
-            out[kv] = value
 
-    return out
+class RequestError(ZaptecApiError):
+    '''Failed to get the results from the API'''
+
+
+class RequestRetryError(ZaptecApiError):
+    '''Retries too many times'''
 
 
 class ZaptecBase(ABC):
@@ -132,12 +127,13 @@ class Installation(ZaptecBase):
         self.circuits = circuits
 
     async def state(self):
+        _LOGGER.debug("Polling state for %s installation (%s)", self.id, self._attrs.get('name'))
         data = await self._account._req_installation(self.id)
         self.set_attributes(data)
 
     async def limit_current(self, **kwargs):
         """Set a limit now how many amps the installation can use
-        Use availableCurrent for setting all phases at once. Use 
+        Use availableCurrent for setting all phases at once. Use
         availableCurrentPhase* to set each phase individually.
         """
         has_availablecurrent = "availableCurrent" in kwargs
@@ -305,6 +301,7 @@ class Circuit(ZaptecBase):
         self.chargers = chargers
 
     async def state(self):
+        _LOGGER.debug("Polling state for %s cicuit (%s)", self.id, self._attrs.get('name'))
         data = await self._account._req_circuit(self.id)
         self.set_attributes(data)
 
@@ -317,6 +314,7 @@ class Charger(ZaptecBase):
 
     async def state(self):
         '''Update the charger state'''
+        _LOGGER.debug("Polling state for %s charger (%s)", self.id, self._attrs.get('name'))
 
         # FIXME: This has multiple set_attributes that might compete for the same key. Fix this.
         # FIXME: E.g. is_online is ambulating between True and 1
@@ -325,7 +323,7 @@ class Charger(ZaptecBase):
         self.set_attributes(data)
 
         data = await self._account._req_charger_state(self.id)
-        data = convert(data, 'StateId', self._account._obs_ids)
+        data = Account._state_to_attrs(data, 'StateId', self._account._obs_ids)
         self.set_attributes(data)
 
         # Firmware version is called. SmartMainboardSoftwareApplicationVersion,
@@ -335,7 +333,7 @@ class Charger(ZaptecBase):
 
         # Fetch some additional attributes from settings
         data = await self._account._req_charger_settings(self.id)
-        data = convert(data.values(), 'SettingId', self._account._set_ids)
+        data = Account._state_to_attrs(data.values(), 'SettingId', self._account._set_ids)
         self.set_attributes(data)
 
         if self.installation_id in self._account.map:
@@ -481,8 +479,6 @@ class Charger(ZaptecBase):
 class Account:
     """This class represent an zaptec account"""
 
-    # FIXME: Separate between commands that result in API commands and public functions
-
     def __init__(self, username: str, password: str, client=None) -> None:
         _LOGGER.debug("Account init")
         self._username = username
@@ -521,7 +517,7 @@ class Account:
                     data = await resp.json()
                     return True
                 else:
-                    raise AuthorizationFailedException
+                    raise AuthorizationError(f"Failed to authenticate. Got status {resp.status}")
         except aiohttp.ClientConnectorError as err:
             _LOGGER.exception("Bad things happend while trying to authenticate :(")
             raise
@@ -542,7 +538,7 @@ class Account:
                 self._token_info.update(data)
                 self._access_token = data.get("access_token")
             else:
-                raise AuthorizationFailedException("Failed to refresh token, check your credentials.")
+                raise AuthorizationError("Failed to refresh token, check your credentials.")
 
     async def _request(self, url: str, method="get", data=None, iteration=1):
         header = {
@@ -555,10 +551,16 @@ class Account:
                 call = getattr(self._client, method)
                 if data is not None and method == "post":
                     call = partial(call, json=data)
+                # _LOGGER.debug(f"@@@   Req {method} to '{full_url}' payload {data}")
+                resp: aiohttp.ClientResponse
                 async with call(full_url, headers=header) as resp:
+                    # _LOGGER.debug(f"  @   Res {resp.status} data length {resp.content_length}")
+                    # _LOGGER.debug(f"  @   Res {resp.status} header {dict((k, v) for k, v in resp.headers.items())}")
+                    # _LOGGER.debug(f"  @   Res {resp.status} content {await resp.text()}")
                     if resp.status == 401:  # Unauthorized
                         await self._refresh_token()
-                        # FIXME: Deal with too many retries
+                        if iteration > API_RETRIES:
+                            raise RequestRetryError(f"Request to {full_url} failed after {iteration} retries")
                         return await self._request(url, iteration=iteration + 1)
                     elif resp.status == 204:  # No content
                         content = await resp.read()
@@ -567,12 +569,10 @@ class Account:
                         json_result = await resp.json(content_type=None)
                         return json_result
                     else:
-                        _LOGGER.error("Could not get info from %s: %s", full_url, resp)
-                        # FIXME: Fail into something more proper
-                        return None
+                        raise RequestError(f"{method} request to {full_url} failed with status {resp.status}: {resp}")
 
         except (asyncio.TimeoutError, aiohttp.ClientError) as err:
-            _LOGGER.exception("Could not get info from %s: %s", full_url, err)
+            raise RequestError(f"Request to {full_url} failed: {err}") from err
 
     async def _req_constants(self):
         data = await self._request("constants")
@@ -694,7 +694,7 @@ class Account:
         if cls_id is not None:
             klass = self.map.get(cls_id)
             if klass:
-                d = convert([data], 'StateId', self._obs_ids)
+                d = Account._state_to_attrs([data], 'StateId', self._obs_ids)
                 klass.set_attributes(d)
             else:
                 _LOGGER.warning("Got update for unknown charger id %s", cls_id)
@@ -703,8 +703,13 @@ class Account:
 
     @staticmethod
     def _get_remap(const, wanted, device_types=None) -> dict:
-
-        #wanted_ids = [k + "Ids" for k in wanted]
+        ''' Parse the given zaptec constants record `const` and generate
+            a remap dict for the given `wanted` keys. If `device_types` is
+            specified, the entries for these device schemas will be merged
+            with the main remap dict.
+            Example:
+                _get_remap(const, ["Observations", "ObservationIds"], [4])
+        '''
         ids = {}
         for k, v in const.items():
             if k in wanted:
@@ -722,6 +727,26 @@ class Account:
         # make the reverse lookup
         ids.update({v: k for k, v in ids.items()})
         return ids
+
+    @staticmethod
+    def _state_to_attrs(data: Iterable[dict[str, str]], key: str, keydict: dict[str, str]):
+        ''' Convert a list of state data into a dict of attributes. `key`
+            is the key that specifies the attribute name. `keydict` is a
+            dict that maps the key value to an attribute name.
+        '''
+        out = {}
+        for item in data:
+            skey = item.get(key)
+            if skey is None:
+                _LOGGER.debug("Missing key %s in %s", key, item)
+                continue
+            value = item.get("Value", item.get("ValueAsString", MISSING))
+            if value is not MISSING:
+                kv = keydict.get(skey, f"{key} {skey}")
+                if kv in out:
+                    _LOGGER.debug("Duplicate key %s. Is '%s', new '%s'", kv, out[kv], value)
+                out[kv] = value
+        return out
 
 
 if __name__ == "__main__":

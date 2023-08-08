@@ -16,9 +16,10 @@ from homeassistant.helpers.debounce import Debouncer
 from homeassistant.helpers.entity import DeviceInfo, EntityDescription
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.helpers.update_coordinator import (CoordinatorEntity,
-                                                      DataUpdateCoordinator)
+                                                      DataUpdateCoordinator,
+                                                      UpdateFailed)
 
-from .api import Account, ZaptecBase
+from .api import Account, ZaptecApiError, ZaptecBase
 from .const import (CONF_ENABLED, CONF_NAME, CONF_SENSOR, CONF_SWITCH,
                     DEFAULT_SCAN_INTERVAL, DOMAIN, EVENT_NEW_DATA,
                     MANUFACTURER, MISSING, REQUEST_REFRESH_DELAY, STARTUP)
@@ -37,9 +38,8 @@ PLATFORMS = [
     Platform.SWITCH,
 ]
 
-# FIXME: Migration from existing config to new setup
 # FIXME: Informing users that the interface is considerable different
-# FIXME: Setting that allows users to continue with old setup?
+# FIXME: Setting that allows users to continue with old naming scheme?
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up integration."""
@@ -130,22 +130,26 @@ class ZaptecUpdateCoordinator(DataUpdateCoordinator[None]):
     async def _async_update_data(self) -> None:
         """Fetch data from Zaptec."""
 
-        async with async_timeout.timeout(10):
-            if not self.account.is_built:
-                # Build the Zaptec hierarchy
-                await self.account.build()
+        try:
+            async with async_timeout.timeout(10):
+                if not self.account.is_built:
+                    # Build the Zaptec hierarchy
+                    await self.account.build()
 
-                # Setup the stream subscription
-                for install in self.account.installs:
-                    await install.stream(cb=self._stream_update)
-                return
+                    # Setup the stream subscription
+                    for install in self.account.installs:
+                        await install.stream(cb=self._stream_update)
+                    return
 
-            # Fetch updates
-            for k, v in self.account.map.items():
-                _LOGGER.debug(
-                    "Updating from Zaptec for %s %s", k, v.__class__.__name__,
-                )
-                await v.state()
+                # Fetch updates
+                for k, v in self.account.map.items():
+                    _LOGGER.debug(
+                        "Updating from Zaptec for %s %s", k, v.__class__.__name__,
+                    )
+                    await v.state()
+        except ZaptecApiError as err:
+            _LOGGER.exception(f"{err}")
+            raise UpdateFailed(err) from err
 
 
 class ZaptecBaseEntity(CoordinatorEntity[ZaptecUpdateCoordinator]):

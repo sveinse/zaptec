@@ -32,6 +32,8 @@ TOKEN_URL = "https://api.zaptec.com/oauth/token"
 API_URL = "https://api.zaptec.com/api/"
 CONST_URL = "https://api.zaptec.com/api/constants"
 
+API_RETRIES = 5
+
 CONF_SENSOR = "sensor"
 CONF_SWITCH = "switch"
 CONF_ENABLED = "enabled"
