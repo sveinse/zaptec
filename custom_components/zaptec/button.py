@@ -27,15 +27,14 @@ class ZaptecButton(ZaptecBaseEntity, ButtonEntity):
         _LOGGER.debug(
             "Press %s '%s' in %s",
             self.__class__.__qualname__,
-            self.entity_description.key,
+            self.key,
             self.zaptec_obj.id
         )
 
-        key = self.entity_description.key
         charger: Charger = self.zaptec_obj
 
         try:
-            await charger.command(key)
+            await charger.command(self.key)
         except Exception as exc:
             raise HomeAssistantError(exc) from exc
 

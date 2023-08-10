@@ -17,7 +17,7 @@ DO_REDACT = True
 
 # If this is set to True, the redacted data will be included in the output.
 # USE WITH CAUTION! This will include sensitive data in the output.
-INCLUDE_REDACTS = True
+INCLUDE_REDACTS = False
 
 class Redactor:
     """ Class to handle redaction of sensitive data. """
@@ -94,7 +94,7 @@ class Redactor:
             for key in self.OBS_KEYS:
                 if key not in obj:
                     continue
-                keyv = self.acc._obs_ids.get(obj[key])
+                keyv = self.acc._obs_ids.get(obj[key])  # FIXME: Access to private member
                 if keyv is not None:
                     obj[key] = f"{obj[key]} ({keyv})"
                 if keyv not in self.REDACT_KEYS:
@@ -122,7 +122,7 @@ async def async_get_device_diagnostics(
 
     async def req(url):
         try:
-            return await acc._request(url)
+            return await acc._request(url)  # FIXME: Access to private member
         except Exception as err:
             return {"failed": str(err)}
 

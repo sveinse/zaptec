@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from datetime import timedelta
+from typing import Any
 
 import async_timeout
 from homeassistant.config_entries import ConfigEntry
@@ -16,12 +17,12 @@ from homeassistant.helpers.debounce import Debouncer
 from homeassistant.helpers.entity import DeviceInfo, EntityDescription
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.helpers.update_coordinator import (CoordinatorEntity,
-                                                      DataUpdateCoordinator)
+                                                      DataUpdateCoordinator,
+                                                      UpdateFailed)
 
-from .api import Account, ZaptecBase
-from .const import (CONF_ENABLED, CONF_NAME, CONF_SENSOR, CONF_SWITCH,
-                    DEFAULT_SCAN_INTERVAL, DOMAIN, EVENT_NEW_DATA,
-                    MANUFACTURER, MISSING, REQUEST_REFRESH_DELAY, STARTUP)
+from .api import Account, ZaptecApiError, ZaptecBase
+from .const import (DEFAULT_SCAN_INTERVAL, DOMAIN, MANUFACTURER, MISSING,
+                    REQUEST_REFRESH_DELAY, STARTUP)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -37,9 +38,8 @@ PLATFORMS = [
     Platform.SWITCH,
 ]
 
-# FIXME: Migration from existing config to new setup
 # FIXME: Informing users that the interface is considerable different
-# FIXME: Setting that allows users to continue with old setup?
+# FIXME: Setting that allows users to continue with old naming scheme?
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up integration."""
@@ -51,6 +51,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up zaptec as config entry."""
 
+    _LOGGER.info(STARTUP)
     _LOGGER.debug("Setting up entry %s: %s", entry.entry_id, entry.data)
 
     coordinator = ZaptecUpdateCoordinator(
@@ -122,30 +123,31 @@ class ZaptecUpdateCoordinator(DataUpdateCoordinator[None]):
 
     @callback
     async def _stream_update(self, event):
-        """Handle new data from the stream."""
-        #_LOGGER.debug(">>> Received new data from stream %s: %s", event)
-        #self.async_set_updated_data(event)
+        """Handle new update event from the zaptec stream. The zaptec objects
+           are updated in-place prior to this callback being called.
+        """
         self.async_update_listeners()
 
     async def _async_update_data(self) -> None:
         """Fetch data from Zaptec."""
 
-        async with async_timeout.timeout(10):
-            if not self.account.is_built:
-                # Build the Zaptec hierarchy
-                await self.account.build()
+        try:
+            async with async_timeout.timeout(10):
+                if not self.account.is_built:
+                    # Build the Zaptec hierarchy
+                    await self.account.build()
 
-                # Setup the stream subscription
-                for install in self.account.installs:
-                    await install.stream(cb=self._stream_update)
-                return
+                    # Setup the stream subscription
+                    for install in self.account.installs:
+                        await install.stream(cb=self._stream_update)
+                    return
 
-            # Fetch updates
-            for k, v in self.account.map.items():
-                _LOGGER.debug(
-                    "Updating from Zaptec for %s %s", k, v.__class__.__name__,
-                )
-                await v.state()
+                # Fetch updates
+                for k, v in self.account.map.items():
+                    await v.state()
+        except ZaptecApiError as err:
+            _LOGGER.exception(f"{err}")
+            raise UpdateFailed(err) from err
 
 
 class ZaptecBaseEntity(CoordinatorEntity[ZaptecUpdateCoordinator]):
@@ -154,6 +156,7 @@ class ZaptecBaseEntity(CoordinatorEntity[ZaptecUpdateCoordinator]):
     zaptec_obj: ZaptecBase
     entity_description: EntityDescription
     _attr_has_entity_name = True
+    _prev_value: Any = MISSING
 
     def __init__(
         self,
@@ -206,14 +209,23 @@ class ZaptecBaseEntity(CoordinatorEntity[ZaptecUpdateCoordinator]):
            be called from _handle_coordinator_update() in the inheriting class.
            It will fetch the attr given by the entity description key.
         '''
-        val = getattr(self.zaptec_obj, self.entity_description.key)
-        _LOGGER.debug("    %s.%s = %s  (%s)",
-                      self.__class__.__qualname__,
-                      self.entity_description.key,
-                      val, type(val))
         if default is MISSING:
-            return getattr(self.zaptec_obj, self.entity_description.key)
-        return getattr(self.zaptec_obj, self.entity_description.key, default)
+            return getattr(self.zaptec_obj, self.key)
+        return getattr(self.zaptec_obj, self.key, default)
+
+    @callback
+    def _log_value(self, value, force=False):
+        '''Helper to log a new value. This is to be called from
+           _handle_coordinator_update() in the inheriting class.
+        '''
+        prev = self._prev_value
+        self._prev_value = value
+        if force or value != prev:
+            # Only logs when the value changes
+            _LOGGER.debug("    %s.%s = %s  (%s)",
+                          self.__class__.__qualname__,
+                          self.key,
+                          value, type(value))
 
     @classmethod
     def create_from(
@@ -294,3 +306,8 @@ class ZaptecBaseEntity(CoordinatorEntity[ZaptecUpdateCoordinator]):
             ))
 
         return entities
+
+    @property
+    def key(self):
+        '''Helper to retrieve the key from the entity description.'''
+        return self.entity_description.key

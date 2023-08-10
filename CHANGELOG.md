@@ -1,10 +1,25 @@
 # Changelog
 
+## 0.0.6b230810
+
+* Remove unused globals from const.py
+* Cleanup logging
+* Introduce ._prev_value, ._log_value(), .key in ZaptecBaseEntity
+* Make service definitions into table for easier overview
+* Fix missing services.yaml
+
+## 0.0.6b230809
+
+* Add exceptions in API
+* Fix exception handling in Account._request
+* Limit number of authentication failed retries before giving up
+
 ## 0.0.6b230808
 
 User:
 * Added buttons "Authorize charging", "Deauthorize Charging"
 * Added sensors "Current phase 1,2,3"
+* Added service "authorized_charging" and "deauthorize_charging"
 
 Technical:
 * Fixed up api.Charger.command() and removed _send_command()
@@ -25,5 +40,5 @@ Major refactoring
 User:
 * Zaptec devices (installation, circuit and charger) are named as set in Zaptec portal
 * More entities for each device. Avoid using attrs and templates.
-* Services replaced by buttons and number actions
+* Added buttons and number actions as alternatives to services
 * Added "Download diagnostics"
