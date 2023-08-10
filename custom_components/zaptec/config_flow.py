@@ -1,7 +1,6 @@
 """Adds config flow for zaptec."""
 from __future__ import annotations
 
-import http
 import logging
 
 import aiohttp

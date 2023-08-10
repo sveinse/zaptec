@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.0.6b230810
+
+* Remove unused globals from const.py
+* Cleanup logging
+* Introduce ._prev_value, ._log_value(), .key in ZaptecBaseEntity
+* Make service definitions into table for easier overview
+* Fix missing services.yaml
+
 ## 0.0.6b230809
 
 * Add exceptions in API

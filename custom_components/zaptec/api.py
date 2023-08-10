@@ -226,11 +226,11 @@ class Installation(ZaptecBase):
 
                             # Decode MC-NBFX message
                             obj = mc_nbfx_decoder(binmsg)
-                            _LOGGER.debug("---   Subscription: %s", obj)
+                            #  _LOGGER.debug("Unecoded message: %s", obj)
 
                             # Convert the json payload
                             json_result = json.loads(obj[0]["text"])
-                            # _LOGGER.debug("Decoded message %s", json_result)
+                            _LOGGER.debug("---   Subscription: %s", json_result)
 
                             # Send result to account that will update the objects
                             self._account.update(json_result)

@@ -25,6 +25,7 @@ class ZaptecBinarySensor(ZaptecBaseEntity, BinarySensorEntity):
     @callback
     def _update_from_zaptec(self) -> None:
         self._attr_is_on = bool(self._get_zaptec_value())
+        self._log_value(self._attr_is_on)
 
 
 class ZaptecBinarySensorWithAttrs(ZaptecBinarySensor):
@@ -39,6 +40,7 @@ class ZaptecBinarySensorLock(ZaptecBinarySensor):
     @callback
     def _update_from_zaptec(self) -> None:
         self._attr_is_on = not bool(self._get_zaptec_value())
+        self._log_value(self._attr_is_on)
 
 
 @dataclass

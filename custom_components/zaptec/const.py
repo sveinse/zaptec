@@ -2,24 +2,22 @@
 from __future__ import annotations
 
 NAME = "zaptec-dev"
-VERSION = "0.0.6b230808"
+VERSION = "0.0.6b230810"
 ISSUEURL = "https://github.com/sveinse/zaptec/issues"
 
-STARTUP = """
+DOMAIN = "zaptec"
+MANUFACTURER = "Zaptec"
+
+STARTUP = f"""
 -------------------------------------------------------------------
-{name}
-Version: {version}
+{NAME}
+Version: {VERSION}
 This is a custom component
 If you have any issues with this you need to open an issue here:
-{issueurl}
+{ISSUEURL}
 -------------------------------------------------------------------
-""".format(
-    name=NAME, version=VERSION, issueurl=ISSUEURL
-)
+"""
 
-DOMAIN = "zaptec"
-OBSERVATIONS_REMAPS = {}
-WANTED_ATTRIBUTES = []
 CHARGE_MODE_MAP = {
     "Unknown": ["Unknown", "mdi:help-rhombus-outline"],
     "Disconnected": ["Disconnected", "mdi:power-plug-off"],
@@ -34,17 +32,7 @@ CONST_URL = "https://api.zaptec.com/api/constants"
 
 API_RETRIES = 5
 
-CONF_SENSOR = "sensor"
-CONF_SWITCH = "switch"
-CONF_ENABLED = "enabled"
-CONF_NAME = "name"
-
-EVENT_NEW_DATA = "event_new_data_zaptec"
-EVENT_NEW_DATA_HOURLY = "event_new_data_hourly_zaptec"
-
 DEFAULT_SCAN_INTERVAL = 60
-
-MANUFACTURER = "Zaptec"
 
 REQUEST_REFRESH_DELAY = 0.3
 

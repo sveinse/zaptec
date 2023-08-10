@@ -1,9 +1,8 @@
 """Zaptec components services."""
 from __future__ import annotations
 
-import asyncio
 import logging
-import os
+from typing import Awaitable, Callable
 
 import voluptuous as vol
 from homeassistant.core import HomeAssistant, ServiceCall
@@ -13,7 +12,10 @@ from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
+TServiceHandler = Callable[[ServiceCall], Awaitable[None]]
 
+# SCHEMAS for services
+# ====================
 has_id_schema = vol.Schema({vol.Required("charger_id"): str})
 
 has_limit_current_schema = vol.Schema(vol.SomeOf(
@@ -40,43 +42,43 @@ async def async_setup_services(hass: HomeAssistant) -> None:
     acc: Account = hass.data[DOMAIN]["api"]
 
     async def service_handle_stop_pause(service_call: ServiceCall) -> None:
-        _LOGGER.debug("called new stop pause")
+        _LOGGER.debug("Called stop pause")
         charger_id = service_call.data["charger_id"]
         charger: Charger = acc.map[charger_id]
         await charger.command("stop_pause")
 
     async def service_handle_resume_charging(service_call: ServiceCall) -> None:
-        _LOGGER.debug("service new start and or resume")
+        _LOGGER.debug("Called start and or resume")
         charger_id = service_call.data["charger_id"]
         charger: Charger = acc.map[charger_id]
         await charger.command("resume_charging")
 
     async def service_handle_authorize_charging(service_call: ServiceCall) -> None:
-        _LOGGER.debug("Authorize charging")
+        _LOGGER.debug("Called authorize charging")
         charger_id = service_call.data["charger_id"]
         charger: Charger = acc.map[charger_id]
         await charger.command("authorize_charge")
 
     async def service_handle_deauthorize_charging(service_call: ServiceCall) -> None:
-        _LOGGER.debug("Deauthorize charging and stop")
+        _LOGGER.debug("Called deauthorize charging and stop")
         charger_id = service_call.data["charger_id"]
         charger: Charger = acc.map[charger_id]
         await charger.command("deauthorize_stop")
 
     async def service_handle_restart_charger(service_call: ServiceCall) -> None:
-        _LOGGER.debug("service restart_charger")
+        _LOGGER.debug("Called restart charger")
         charger_id = service_call.data["charger_id"]
         charger: Charger = acc.map[charger_id]
         await charger.command("restart_charger")
 
     async def service_handle_update_firmware(service_call: ServiceCall) -> None:
-        _LOGGER.debug("service update_firmware")
+        _LOGGER.debug("Called update firmware")
         charger_id = service_call.data["charger_id"]
         charger: Charger = acc.map[charger_id]
         await charger.command("upgrade_firmware")
 
     async def service_handle_limit_current(service_call: ServiceCall) -> None:
-        _LOGGER.debug("update current limit")
+        _LOGGER.debug("Called set current limit")
         installation_id = service_call.data["installation_id"]
         available_current = service_call.data.get("available_current")
         available_current_phase1 = service_call.data.get("available_current_phase1")
@@ -90,30 +92,17 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             availableCurrentPhase3=available_current_phase3,
         )
 
-    hass.services.async_register(
-        DOMAIN, "stop_pause_charging", service_handle_stop_pause, schema=has_id_schema
-    )
+    # LIST OF SERVICES
+    services: list[tuple[str, vol.Schema, TServiceHandler]] = [
+        ("stop_pause_charging",  has_id_schema, service_handle_stop_pause),
+        ("resume_charging",      has_id_schema, service_handle_resume_charging),
+        ("authorize_charging",   has_id_schema, service_handle_authorize_charging),
+        ("deauthorize_charging", has_id_schema, service_handle_deauthorize_charging),
+        ("restart_charger",      has_id_schema, service_handle_restart_charger),
+        ("update_firmware",      has_id_schema, service_handle_update_firmware),
+        ("limit_current",        has_limit_current_schema, service_handle_limit_current),
+    ]
 
-    hass.services.async_register(
-        DOMAIN, "resume_charging", service_handle_resume_charging, schema=has_id_schema
-    )
-
-    hass.services.async_register(
-        DOMAIN, "authorize_charging", service_handle_authorize_charging, schema=has_id_schema
-    )
-
-    hass.services.async_register(
-        DOMAIN, "deauthorize_charging", service_handle_deauthorize_charging, schema=has_id_schema
-    )
-
-    hass.services.async_register(
-        DOMAIN, "restart_charger", service_handle_restart_charger, schema=has_id_schema
-    )
-
-    hass.services.async_register(
-        DOMAIN, "update_firmware", service_handle_update_firmware, schema=has_id_schema
-    )
-
-    hass.services.async_register(
-        DOMAIN, "limit_current", service_handle_limit_current, schema=has_limit_current_schema
-    )
+    # Register the services
+    for name, schema, handler in services:
+        hass.services.async_register(DOMAIN, name, handler, schema=schema)

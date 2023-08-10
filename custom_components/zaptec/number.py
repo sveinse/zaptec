@@ -25,6 +25,7 @@ class ZaptecNumber(ZaptecBaseEntity, NumberEntity):
     @callback
     def _update_from_zaptec(self) -> None:
         self._attr_native_value = self._get_zaptec_value()
+        self._log_value(self._attr_native_value)
 
 
 class ZaptecAvailableCurrentNumber(ZaptecNumber):
@@ -40,7 +41,7 @@ class ZaptecAvailableCurrentNumber(ZaptecNumber):
         _LOGGER.debug(
             "Setting %s '%s' to '%s' in %s",
             self.__class__.__qualname__,
-            self.entity_description.key,
+            self.key,
             value,
             self.zaptec_obj.id
         )

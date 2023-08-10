@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from datetime import timedelta
 
 from homeassistant import const
 from homeassistant.components.sensor import (SensorDeviceClass, SensorEntity,
@@ -28,6 +27,7 @@ class ZaptecSensor(ZaptecBaseEntity, SensorEntity):
     @callback
     def _update_from_zaptec(self) -> None:
         self._attr_native_value = self._get_zaptec_value()
+        self._log_value(self._attr_native_value)
 
 
 class ZaptecChargeSensor(ZaptecSensor):
@@ -38,6 +38,7 @@ class ZaptecChargeSensor(ZaptecSensor):
         mode = CHARGE_MODE_MAP.get(state, CHARGE_MODE_MAP["Unknown"])
         self._attr_native_value = mode[0]
         self._attr_icon = mode[1]
+        self._log_value(self._attr_native_value)
 
 
 @dataclass

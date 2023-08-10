@@ -24,6 +24,7 @@ class ZaptecSwitch(ZaptecBaseEntity, SwitchEntity):
     @callback
     def _update_from_zaptec(self) -> None:
         self._attr_is_on = bool(self._get_zaptec_value())
+        self._log_value(self._attr_is_on)
 
 
 class ZaptecChargeSwitch(ZaptecSwitch):
@@ -32,8 +33,9 @@ class ZaptecChargeSwitch(ZaptecSwitch):
 
     @callback
     def _update_from_zaptec(self) -> None:
-        state = super()._get_zaptec_value()
+        state = self._get_zaptec_value()
         self._attr_is_on = state in ["Connected_Charging"]
+        self._log_value(self._attr_is_on)
 
     async def async_turn_on(self, **kwargs):  # pylint: disable=unused-argument
         """Turn on the switch."""
