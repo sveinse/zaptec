@@ -11,17 +11,23 @@
 [![Discord][discord-shield]][discord]
 [![Community Forum][forum-shield]][forum]
 
-## WARNING: Development version
+
+## :warning: Development version
 
 **IMPORTANT!** This is https://github.com/sveinse/zaptec which is @sveinse's fork
-of upstream/official zaptec integration at https://github.com/custom-components/zaptec
+of upstream/official zaptec integration at https://github.com/custom-components/zaptec. This is under active development, and any feedback on your experience
+using it is very appreciated. Add issues here: https://github.com/sveinse/zaptec/issues
 
-This repo can be installed manually into Home assistant by manually adding the URL
-in HACS.
+> :information_source: **IMPORTANT!** This is a major refactor of the upstream zaptec integration. The names and device setup has been significantly
+refactored. Installing this version will break your existing automations
+and templates.
 
-**WARNING!** Existing `zaptec` installations MUST be uninstalled first.
-Installing this repo will clash with existing integration already
-installed.
+This repo can be installed manually into Home Assistant by manually adding the
+URL in HACS.
+
+:information_source: **NOTE!** Existing `zaptec` installations MUST be
+uninstalled first. Installing this repo will clash with existing integration
+already installed.
 
 ### Step 1
 ![Setup1](/img/hacs_custom.png)
@@ -33,13 +39,25 @@ installed.
 ![Setup3](/img/hacs_zaptec_dev.png)
 
 
-### Usage
-Use hacs to install the package, add the config example for more usage see the `lovelace_example`
+## What's new
 
-Setup the integration using the integrations page.
+The zaptec integration has been completely refactored and the way to interact
+with it in Home Assistant has changed. The zaptec data is now represented as
+proper entities (like sensors, numbers, buttons, etc). This makes logging and
+interactions much simpler and it needs no additional templates.
+
+The integration is set up as one devices for each of the detected Zaptec
+devices. Most users will have three devices: An installation device, a circuit
+and a charger and each provide different functionality.
+
+The previous zaptec entities were named `zaptec_charger_<uuid>`,
+`zaptec_installation_<uuid>` and `zaptec_circute_<uuid>`. The full data were
+available as attributes in these objects, and they could be retried with
+the aid of manual templates. The same objects exists, but under the names
+`<name> Installer`, `<name> Charger` and `<name> Circuit`.
 
 
-### Zaptec concept
+### Zaptec device concept
 
 Zaptec use three levels of abstractions in their EVCP setup.
 
@@ -50,66 +68,72 @@ Zaptec use three levels of abstractions in their EVCP setup.
   circuit might have more than one charger.
 
 
-### Pause and resuming charging
+## How to use it
 
-Pausing charging can be set by issuing the service `zaptec.stop_pause_charging`
+### Start & stop charging
 
-```yaml
-- service: zaptec.stop_pause_charging
-  data:
-    charger_id: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-```
+Starting and stopping charging can be done by several methods. If the charger
+is configured to no require authentication, connecting the charger to the
+EV will by default start charging.
 
-The charger ID can be read from the `ID` attrbute under the `zaptec_charger_*`
-entity.
+To start the charging from HA, this can be done in several ways:
 
-Resuming charging is done the same way:
+- Press the "Resume charging" button, or
+- Toggle the "Charging" switch, or
+- Send `zaptec.restart_charger` service call
 
-```yaml
-- service: zaptec.resume_charging
-  data:
-    charger_id: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-```
+Similarly, pausing the charging can be done by:
 
-### Set charge current
+- Pressing the "Stop/pause charging" button, or
+- Toggle the "Charging" switch (if it was active), or
+- Send `zaptec.stop_pause_charging` service call
 
-The charge current can be set by issuing the service `zaptec.limit_current`.
-It sets the maximum current available on the _installation_ and will affect all
-circuits and chargers.
-
-```yaml
-- service: zaptec.limit_current
-  data:
-    installation_id: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-    available_current: 12
-```
-
-The installation ID can be found as the `ID` attribute under the
-entity named `zaptec_installation_*`.
-
-Please note that the Zaptec API docs warns against settings the current too
-frequest as charging cars might trigger an error if it changes too often. Once
-per 15 minutes is recommended.
+> :information_source: Please note that Zaptec unlocks the cable when charging
+is paused unless it is permanently locked.
 
 
-### Disable auto charge start
+### Setting charging current
 
-Zaptec seems to start charging automatically when a charge ready EV is
-connected to a charger. This might not be wanted behavior if delayed start is
-wanted. The following trick will put the charger in _waiting_ mode and not
-start immediately:
+The "Available current" number entity in the installation device will set
+the maximum current the EV can use. This slider will set all 3 phases at
+the same time.
 
-1. Set the available current to 0 (which must be done before the EV is
-   plugged in)
-2. Connect the EV
-3. When ready to charge, set the available current to the wanted value
+:information_source: This entity is adjusting the available current for the
+entire installation. If the installation has several chargers installed,
+changing this value will affect all.
 
-If the available current is set back to 0, the Zaptec will put the charge
-session into _finished_ mode. Thus setting of the available current is an
-effective way to start and stop the charging.
+The "Available current" number can be used to prevent the charger from
+automatically start charging by setting the value to 0. To start charging
+a non-zero value must be set.
 
-Note that the avaialable acts on the entire installation. If you have multiple
-circuits and/or chargers, this will apply to all of them!
+> :warning: Many EVs doesn't like getting too frequent changes
+to the available charge current. Zaptec recommends not changing the values
+more often than 15 minutes.
+
+#### 3 phase current adjustment
+
+The service call `limit_current` can be used with the arguments `available_current_phase1`, `..phase2` and `..phase3` to set the available
+current on individual phases.
+
+
+### Require charging authorization
+
+Many users wants to setup their charger to require authorization before giving
+power to charge any EV. This integration does not offer any options to configure
+authorization, please use the official [Zaptec portal](https://portal.zaptec.com/)
+or app to configure and set up.
+
+When an EV charging cable is inserted into the charger, it will go into _Waiting_
+mode until it has been authorized. This can be done with RFID tags, the Zaptec
+app and more.
+
+If the installation is configured for _native authentication_ it is possible
+to authorize charging from Home Assistant using the "Authorize charging"
+button. It stays authorized until either the cable is removed or the button
+"Deauthorize charging" is pressed.
+
+> :information_source: Please note that Zaptec unlocks the cable when charging
+is paused unless it is permanently locked.
 
 
 [zaptec]: https://github.com/custom-components/zaptec
