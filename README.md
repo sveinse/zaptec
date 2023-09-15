@@ -14,18 +14,39 @@
 
 ## :warning: Development version
 
-**IMPORTANT!** This is https://github.com/sveinse/zaptec which is @sveinse's fork
-of upstream/official zaptec integration at https://github.com/custom-components/zaptec. This is under active development, and any feedback on your experience
-using it is very appreciated. Add issues here: https://github.com/sveinse/zaptec/issues
+**:information_source: IMPORTANT!** This is https://github.com/sveinse/zaptec
+which is @sveinse fork of upstream/official zaptec integration at
+https://github.com/custom-components/zaptec.
+This is under active development, and any feedback on your experience using it
+is very appreciated.
 
-> :information_source: **IMPORTANT!** This is a major refactor of the upstream zaptec integration. The names and device setup has been significantly
-refactored. Installing this version will break your existing automations
-and templates.
+**:warning:  WARNING!** This is a major refactor of the upstream zaptec
+integration. The names and device setup has been significantly refactored.
+Installing this version will break your existing automations and templates.
+
+
+## Beta testing
+
+The component is currently under beta testing. Any feedback on problems,
+improvements or joy can be given at: https://github.com/sveinse/zaptec/issues
+
+In particular the following items is of particular interest:
+
+* Is everything working as it should? Any error messages?
+* Does your autpmations and operation of the charger work with your use?
+* Any missing entities (sensors, buttons, switches)?
+* Are the new entity names ok?
+
+In some cases it would help debugging to have access to the diagnostics info.
+Please see the "Diagnostics" section below in how to generate if it is requested.
+
+
+## Installation
 
 This repo can be installed manually into Home Assistant by manually adding the
 URL in HACS.
 
-:information_source: **NOTE!** Existing `zaptec` installations MUST be
+**:information_source: NOTE!** Existing `zaptec` installations MUST be
 uninstalled first. Installing this repo will clash with existing integration
 already installed.
 
@@ -88,7 +109,7 @@ Similarly, pausing the charging can be done by:
 - Toggle the "Charging" switch (if it was active), or
 - Send `zaptec.stop_pause_charging` service call
 
-> :information_source: Please note that Zaptec unlocks the cable when charging
+**:information_source: NOTE:** Zaptec will unlocks the cable when charging
 is paused unless it is permanently locked.
 
 
@@ -98,7 +119,7 @@ The "Available current" number entity in the installation device will set
 the maximum current the EV can use. This slider will set all 3 phases at
 the same time.
 
-:information_source: This entity is adjusting the available current for the
+**:information_source: NOTE!** This entity is adjusting the available current for the
 entire installation. If the installation has several chargers installed,
 changing this value will affect all.
 
@@ -106,7 +127,7 @@ The "Available current" number can be used to prevent the charger from
 automatically start charging by setting the value to 0. To start charging
 a non-zero value must be set.
 
-> :warning: Many EVs doesn't like getting too frequent changes
+**:information_source: NOTE!** Many EVs doesn't like getting too frequent changes
 to the available charge current. Zaptec recommends not changing the values
 more often than 15 minutes.
 
@@ -132,8 +153,17 @@ to authorize charging from Home Assistant using the "Authorize charging"
 button. It stays authorized until either the cable is removed or the button
 "Deauthorize charging" is pressed.
 
-> :information_source: Please note that Zaptec unlocks the cable when charging
+**:information_source: INFO:** Please note that Zaptec unlocks the cable when charging
 is paused unless it is permanently locked.
+
+
+### Diagnostics
+
+The integration supports downloading of diagnostics data. This can be reached
+by `Settings -> Devices & Services -> <one of your zaptec devices>` and then
+press the "Download diagnostics". The file downloaded is anonymized and should
+not contain any personal information. Please double check that the file
+doesn't contain any personal information before sharing.
 
 
 [zaptec]: https://github.com/custom-components/zaptec

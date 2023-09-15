@@ -11,10 +11,34 @@
 [![Discord][discord-shield]][discord]
 [![Community Forum][forum-shield]][forum]
 
-### Usage
-Use hacs to install the package, add the config example for more usage see the `lovelace_example`
 
-Setup the integration using the integrations page.
+## :warning: Development version
+
+**:information_source: IMPORTANT!** This is https://github.com/sveinse/zaptec
+which is @sveinse fork of upstream/official zaptec integration at
+https://github.com/custom-components/zaptec.
+This is under active development, and any feedback on your experience using it
+is very appreciated.
+
+**:warning:  WARNING!** This is a major refactor of the upstream zaptec
+integration. The names and device setup has been significantly refactored.
+Installing this version will break your existing automations and templates.
+
+
+## Beta testing
+
+The component is currently under beta testing. Any feedback on problems,
+improvements or joy can be given at: https://github.com/sveinse/zaptec/issues
+
+In particular the following items is of particular interest:
+
+* Is everything working as it should? Any error messages?
+* Does your autpmations and operation of the charger work with your use?
+* Any missing entities (sensors, buttons, switches)?
+* Are the new entity names ok?
+
+In some cases it would help debugging to have access to the diagnostics info.
+Please see the "Diagnostics" section below in how to generate if it is requested.
 
 
 [zaptec]: https://github.com/custom-components/zaptec
