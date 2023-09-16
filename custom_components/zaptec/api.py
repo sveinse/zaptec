@@ -65,6 +65,14 @@ class AuthorizationError(ZaptecApiError):
 class RequestError(ZaptecApiError):
     '''Failed to get the results from the API'''
 
+    def __init__(self, message, error_code):
+        super().__init__(message)
+        self.error_code = error_code
+
+
+class RequestTimeoutError(ZaptecApiError):
+    '''Failed to get the results from the API'''
+
 
 class RequestRetryError(ZaptecApiError):
     '''Retries too many times'''
@@ -107,6 +115,12 @@ class ZaptecBase(ABC):
         except KeyError as exc:
             raise AttributeError(exc) from exc
 
+    def get(self, key, default=MISSING):
+        if default is MISSING:
+            return self._attrs[to_under(key)]
+        else:
+            return self._attrs.get(to_under(key), default)
+
     def asdict(self):
         """Return the attributes as a dict"""
         return self._attrs
@@ -145,7 +159,14 @@ class Installation(ZaptecBase):
         await self.state()
 
         # Get the hierarchy of circurits and chargers
-        hierarchy = await self._account._request(f"installation/{self.id}/hierarchy")
+        try:
+            hierarchy = await self._account._request(f"installation/{self.id}/hierarchy")
+        except RequestError as err:
+            if err.error_code == 403:
+                _LOGGER.warning("Access denied to installation hierarchy of %s. The user might not have access.", self.id)
+                self.circuits = []
+                return
+            raise
 
         circuits = []
         for item in hierarchy["Circuits"]:
@@ -190,19 +211,17 @@ class Installation(ZaptecBase):
                 from azure.servicebus.aio import ServiceBusClient
                 from azure.servicebus.exceptions import ServiceBusError
             except ImportError:
-                _LOGGER.debug("Azure Service bus is not available. Resolving to polling")
+                _LOGGER.warning("Azure Service bus is not available. Resolving to polling")
                 # https://github.com/custom-components/zaptec/issues
                 return
 
             # Get connection details
-            # FIXME: The validator will fail if not all fields are set, so how to handle this?
-            conf = await self.live_stream_connection_details()
-
-            # Check if we can use it.
-            if any(True for i in ["Password", "Username", "Host"] if not conf.get(i)):
-                _LOGGER.warning(
-                    "Cant enable live update using the servicebus, enable it in the zaptec portal"
-                )
+            try:
+                conf = await self.live_stream_connection_details()
+            except RequestError as err:
+                if err.error_code != 403:
+                    raise
+                _LOGGER.warning("Failed to get live stream info. Check if user have access in the zaptec portal")
                 return
 
             # Open the connection
@@ -240,7 +259,11 @@ class Installation(ZaptecBase):
 
                             # Convert the json payload
                             json_result = json.loads(obj[0]["text"])
-                            _LOGGER.debug("---   Subscription: %s", json_result)
+
+                            json_log = json_result.copy()
+                            if "StateId" in json_log:
+                                json_log["StateId"] = f"{json_log['StateId']} ({self._account._obs_ids.get(json_log['StateId'])})"
+                            _LOGGER.debug("---   Subscription: %s", json_log)
 
                             # Send result to account that will update the objects
                             self._account.update(json_result)
@@ -437,14 +460,32 @@ class Charger(ZaptecBase):
         '''Update the charger state'''
         _LOGGER.debug("Polling state for %s charger (%s)", self.id, self._attrs.get('name'))
 
-        # Get the main charger info
-        charger = await self.charger_info()
-        self.set_attributes(charger)
+        try:
+            # Get the main charger info
+            charger = await self.charger_info()
+            self.set_attributes(charger)
+        except RequestError as err:
+            # An unprivileged user will get a 403 error, but the user is able
+            # to get _some_ info about the charger by getting a list of
+            # chargers.
+            if err.error_code != 403:
+                raise
+            _LOGGER.debug("Access denied to charger %s, attempting list", self.id)
+            chargers = await self._account._request("chargers")
+            for chg in chargers["Data"]:
+                if chg["Id"] == self.id:
+                    self.set_attributes(chg)
+                    break
 
         # Get the state from the charger
-        state = await self._account._request(f"chargers/{self.id}/state")
-        data = Account._state_to_attrs(state, 'StateId', self._account._obs_ids)
-        self.set_attributes(data)
+        try:
+            state = await self._account._request(f"chargers/{self.id}/state")
+            data = Account._state_to_attrs(state, 'StateId', self._account._obs_ids)
+            self.set_attributes(data)
+        except RequestError as err:
+            if err.error_code != 403:
+                raise
+            _LOGGER.debug("Access denied to charger %s state", self.id)
 
         # Firmware version is called. SmartMainboardSoftwareApplicationVersion,
         # stateid 908
@@ -452,22 +493,32 @@ class Charger(ZaptecBase):
         # maybe remove this later if it dont interest ppl.
 
         # Fetch some additional attributes from settings
-        settings = await self._account._request(f"chargers/{self.id}/settings")
-        data = Account._state_to_attrs(settings.values(), 'SettingId', self._account._set_ids)
-        self.set_attributes(data)
+        try:
+            settings = await self._account._request(f"chargers/{self.id}/settings")
+            data = Account._state_to_attrs(settings.values(), 'SettingId', self._account._set_ids)
+            self.set_attributes(data)
+        except RequestError as err:
+            if err.error_code != 403:
+                raise
+            _LOGGER.debug("Access denied to charger %s settings", self.id)
 
         if self.installation_id in self._account.map:
-            firmware_info = await self._account._request(
-                f"chargerFirmware/installation/{self.installation_id}"
-            )
+            try:
+                firmware_info = await self._account._request(
+                    f"chargerFirmware/installation/{self.installation_id}"
+                )
 
-            for fm in firmware_info:
-                if fm["ChargerId"] == self.id:
-                    self.set_attributes({
-                        "current_firmware_version": fm["CurrentVersion"],
-                        "available_firmware_version": fm["AvailableVersion"],
-                        "firmware_update_to_date": fm["IsUpToDate"],
-                    })
+                for fm in firmware_info:
+                    if fm["ChargerId"] == self.id:
+                        self.set_attributes({
+                            "current_firmware_version": fm["CurrentVersion"],
+                            "available_firmware_version": fm["AvailableVersion"],
+                            "firmware_update_to_date": fm["IsUpToDate"],
+                        })
+            except RequestError as err:
+                if err.error_code != 403:
+                    raise
+                _LOGGER.debug("Access denied to charger %s firmware info", self.id)
 
     async def live(self):
         # FIXME: Is this an experiment? Omit?
@@ -530,6 +581,11 @@ class Charger(ZaptecBase):
     async def command(self, command: str):
         """Send a command to the charger"""
 
+        if command == 'authorize_charge':
+            return await self.authorize_charge()
+
+        # Fetching the name from the const is perhaps not a good idea
+        # if Zaptec is changing them.
         cmdid = self._account._cmd_ids.get(command)
         if cmdid is None:
             raise ValueError(f"Unknown command {command}")
@@ -549,7 +605,7 @@ class Charger(ZaptecBase):
 
         if any(d for d in values if d['id'] is None):
             raise ValueError(f"Unknown setting '{settings}'")
-        
+
         _LOGGER.debug("Settings %s", settings)
         data = await self._account._request(
             f"chargers/{self.id}/settings",
@@ -557,18 +613,18 @@ class Charger(ZaptecBase):
         )
         return data
 
-    async def stop_pause(self):
-        return await self.command("stop_pause")
+    async def stop_charging_final(self):
+        return await self.command("stop_charging_final")
 
     async def resume_charging(self):
         return await self.command("resume_charging")
-    
-    async def deauthorize_stop(self):
-        return await self.command("deauthorize_stop")
-    
+
+    async def deauthorize_and_stop(self):
+        return await self.command("deauthorize_and_stop")
+
     async def restart_charger(self):
         return await self.command("restart_charger")
-    
+
     async def upgrade_firmware(self):
         return await self.command("upgrade_firmware")
 
@@ -664,9 +720,10 @@ class Account:
 
         async def log_response(resp: aiohttp.ClientResponse):
             try:
-                _LOGGER.debug(f"@@@  RESPONSE {resp.status} length {resp.content_length}")
+                contents = await resp.read()
+                _LOGGER.debug(f"@@@  RESPONSE {resp.status} length {len(contents)}")
                 _LOGGER.debug(f"     header {dict((k, v) for k, v in resp.headers.items())}")
-                if not resp.content_length:
+                if not contents:
                     return
                 if resp.status != 200:
                     _LOGGER.debug(f"     content {await resp.text()}")
@@ -720,10 +777,13 @@ class Account:
                             log_request()
                             await log_response(resp)
 
-                        raise RequestError(f"{method} request to {full_url} failed with status {resp.status}: {resp}")
+                        raise RequestError(
+                            f"{method} request to {full_url} failed with status {resp.status}: {resp}",
+                            resp.status
+                        )
 
         except (asyncio.TimeoutError, aiohttp.ClientError) as err:
-            raise RequestError(f"Request to {full_url} failed: {err}") from err
+            raise RequestTimeoutError(f"Request to {full_url} failed: {err}") from err
 
     #   API METHODS DONE
     # =======================================================================
@@ -778,6 +838,11 @@ class Account:
             self._obs_ids = Account._get_remap(self._const, ["Observations", "ObservationIds"], device_types)
             self._set_ids = Account._get_remap(self._const, ["Settings", "SettingIds"], device_types)
             self._cmd_ids = Account._get_remap(self._const, ["Commands", "CommandIds"], device_types)
+
+            # Commands can also be specified as lower case strings
+            self._cmd_ids.update({
+                to_under(k): v for k, v in self._cmd_ids.items() if isinstance(k, str)
+            })
 
         # Update the state on all chargers
         for data in self.map.values():
