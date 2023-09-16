@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.0.6b230916
+
+* Fix better error handling if the zaptec login provides less access, such as
+  ordinary users without any privilege status. It crashed the configuration
+  and prevented any use of the component. sveinse/github#10
+* Ensure entities are marked as "Unavailable" if they don't exists in Zaptec
+  and ensure the startup doesn't fail without them
+* Fix text for binary sensor "charger.is_authorization_requried"
+* Fix more user friendly error messages
+
 ## 0.0.6b230914
 
 * Added parsing of incoming data from Zaptec API with pydantic. Verify
