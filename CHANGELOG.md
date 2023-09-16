@@ -1,14 +1,23 @@
 # Changelog
 
-## 0.0.6b230916
+## 0.0.6b230917
 
 * Fix better error handling if the zaptec login provides less access, such as
   ordinary users without any privilege status. It crashed the configuration
-  and prevented any use of the component. sveinse/github#10
+  and prevented any use of the component. sveinse/zaptec#10
 * Ensure entities are marked as "Unavailable" if they don't exists in Zaptec
   and ensure the startup doesn't fail without them
 * Fix text for binary sensor "charger.is_authorization_requried"
+* Added sensor "total_charge_power_session"
+* Fixed bug in unity of "total_charge_power"
+* Fix non-working authorize and deauthorize commands, sveinse/zaptec#2
+* Fix non-working stop charging commands, sveinse/zaptec#15. Possibly zaptec
+  have changed their names. Rename to stop_charging_final()
 * Fix more user friendly error messages
+* Fix bug in error reporting and logging
+* Fixed bug in entity unit of Charger.total_charge_power
+* Added missing validation tests
+* Entity rename for more inituitive names
 
 ## 0.0.6b230914
 
