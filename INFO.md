@@ -12,6 +12,26 @@
 [![Community Forum][forum-shield]][forum]
 
 
+# Features
+
+* Integration for Home assistant for Zaptec Chargers through the Zaptec
+  cloud API
+* Provides start & stop of charging the EV
+* Supports basic (native authentication)
+* Sensors and status, current, energy
+* Adjustable charging currents
+
+To use this component, a user with access to
+[Zaptec Portal](https://portal.zaptec.com/) is needed.
+
+Confirmed to work with
+
+* Zaptec Go
+
+> *) Send a message to @sveinse if you have been able to use any other chargers
+in order to put it on the list.
+
+
 ## :warning: Development version
 
 **:information_source: IMPORTANT!** This is https://github.com/sveinse/zaptec
@@ -36,9 +56,28 @@ In particular the following items is of particular interest:
 * Does your autpmations and operation of the charger work with your use?
 * Any missing entities (sensors, buttons, switches)?
 * Are the new entity names ok?
+* What is missing from documentation?
 
 In some cases it would help debugging to have access to the diagnostics info.
 Please see the "Diagnostics" section below in how to generate if it is requested.
+
+
+## What's new in this Beta
+
+The zaptec integration has been completely refactored and the way to interact
+with it in Home Assistant has changed. The zaptec data is now represented as
+proper entities (like sensors, numbers, buttons, etc). This makes logging and
+interactions much simpler and it needs no additional templates.
+
+The integration is set up as one devices for each of the detected Zaptec
+devices. Most users will have three devices: An installation device, a circuit
+and a charger and each provide different functionality.
+
+The previous zaptec entities were named `zaptec_charger_<uuid>`,
+`zaptec_installation_<uuid>` and `zaptec_circute_<uuid>`. The full data were
+available as attributes in these objects, and they could be retried with
+the aid of manual templates. The same objects exists, but under the names
+`<name> Installer`, `<name> Charger` and `<name> Circuit`.
 
 
 [zaptec]: https://github.com/custom-components/zaptec
