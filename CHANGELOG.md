@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.0.6b230918
+
+* Format with black
+* Add support of decoding the api attributes that is encoded with OCMF. This
+  includes `CompletedSession` and `SignedMeterValue`
+* Remove no-nothing method `Charger.update()`
+* Improve redaction. Add fields that should be redacted and add a second pass
+  to catch text earlier in the output that should be redacted. sveinse/zaptec#7
+* Minor cleanups
+
 ## 0.0.6b230917
 
 * Fix better error handling if the zaptec login provides less access, such as
