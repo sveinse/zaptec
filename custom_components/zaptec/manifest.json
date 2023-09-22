@@ -9,5 +9,5 @@
     "sveinse"
   ],
   "requirements": ["azure-servicebus", "pydantic"],
-  "version": "0.0.6b230917"
+  "version": "0.0.6b230918"
 }

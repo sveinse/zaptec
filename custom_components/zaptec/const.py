@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 NAME = "zaptec-dev"
-VERSION = "0.0.6b230917"
+VERSION = "0.0.6b230918"
 ISSUEURL = "https://github.com/sveinse/zaptec/issues"
 
 DOMAIN = "zaptec"
@@ -36,8 +36,11 @@ DEFAULT_SCAN_INTERVAL = 60
 
 REQUEST_REFRESH_DELAY = 0.3
 
+
 class Missing:
-    '''Singleton class representing a missing value.'''
+    """Singleton class representing a missing value."""
+
+
 MISSING = Missing()
 
 TRUTHY = ["true", "1", "on", "yes", 1, True]

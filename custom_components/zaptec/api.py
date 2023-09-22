@@ -38,8 +38,7 @@ signalr is used by the website.
 
 # to Support running this as a script.
 if __name__ == "__main__":
-    from const import (API_RETRIES, API_URL, CONST_URL, FALSY, MISSING,
-                       TOKEN_URL, TRUTHY)
+    from const import API_RETRIES, API_URL, MISSING, TOKEN_URL, TRUTHY
     from misc import mc_nbfx_decoder, to_under
     from validate import validate
 
@@ -48,22 +47,27 @@ if __name__ == "__main__":
     logging.getLogger("azure").setLevel(logging.WARNING)
 
 else:
-    from .const import (API_RETRIES, API_URL, CONST_URL, FALSY, MISSING,
-                        TOKEN_URL, TRUTHY)
+    from .const import (
+        API_RETRIES,
+        API_URL,
+        MISSING,
+        TOKEN_URL,
+        TRUTHY,
+    )
     from .misc import mc_nbfx_decoder, to_under
     from .validate import validate
 
 
 class ZaptecApiError(Exception):
-    '''Base exception for all Zaptec API errors'''
+    """Base exception for all Zaptec API errors"""
 
 
 class AuthorizationError(ZaptecApiError):
-    '''Authenatication failed'''
+    """Authenatication failed"""
 
 
 class RequestError(ZaptecApiError):
-    '''Failed to get the results from the API'''
+    """Failed to get the results from the API"""
 
     def __init__(self, message, error_code):
         super().__init__(message)
@@ -71,11 +75,32 @@ class RequestError(ZaptecApiError):
 
 
 class RequestTimeoutError(ZaptecApiError):
-    '''Failed to get the results from the API'''
+    """Failed to get the results from the API"""
 
 
 class RequestRetryError(ZaptecApiError):
-    '''Retries too many times'''
+    """Retries too many times"""
+
+
+#
+# Attribute type converters
+#
+def type_ocmf(data):
+    """Open Charge Metering Format (OCMF) type"""
+    # https://github.com/SAFE-eV/OCMF-Open-Charge-Metering-Format/blob/master/OCMF-en.md
+    sects = data.split("|")
+    if len(sects) not in (2, 3) or sects[0] != "OCMF":
+        raise ValueError(f"Invalid OCMF data: {data}")
+    data = json.loads(sects[1])
+    return data
+
+
+def type_completed_session(data):
+    """Convert the CompletedSession to a dict"""
+    data = json.loads(data)
+    if "SignedSession" in data:
+        data["SignedSession"] = type_ocmf(data["SignedSession"])
+    return data
 
 
 class ZaptecBase(ABC):
@@ -95,18 +120,39 @@ class ZaptecBase(ABC):
         self.set_attributes(data)
 
     def set_attributes(self, data: TDict) -> bool:
-        """Set the class attributes from the given data"""""
+        """Set the class attributes from the given data"""
         for k, v in data.items():
             # Cast the value to the correct type
             new_key = to_under(k)
-            new_v = self.ATTR_TYPES.get(new_key, lambda x: x)(v)
+            try:
+                new_v = self.ATTR_TYPES.get(new_key, lambda x: x)(v)
+            except Exception as err:
+                _LOGGER.error(
+                    "Failed to convert attribute %s (%s) value <%s> %s: %s",
+                    k,
+                    new_key,
+                    type(v).__qualname__,
+                    v,
+                    err,
+                )
+                new_v = v
             new_vt = type(new_v).__qualname__
             if new_key not in self._attrs:
                 qn = self.__class__.__qualname__
-                _LOGGER.debug(">>>   Adding %s.%s (%s)  =  <%s> %s", qn, new_key, k, new_vt, new_v)
+                _LOGGER.debug(
+                    ">>>   Adding %s.%s (%s)  =  <%s> %s", qn, new_key, k, new_vt, new_v
+                )
             elif self._attrs[new_key] != new_v:
                 qn = self.__class__.__qualname__
-                _LOGGER.debug(">>>   Updating %s.%s (%s)  =  <%s> %s  (was %s)", qn, new_key, k, new_vt, new_v, self._attrs[new_key])
+                _LOGGER.debug(
+                    ">>>   Updating %s.%s (%s)  =  <%s> %s  (was %s)",
+                    qn,
+                    new_key,
+                    k,
+                    new_vt,
+                    new_v,
+                    self._attrs[new_key],
+                )
             self._attrs[new_key] = new_v
 
     def __getattr__(self, key):
@@ -160,10 +206,15 @@ class Installation(ZaptecBase):
 
         # Get the hierarchy of circurits and chargers
         try:
-            hierarchy = await self._account._request(f"installation/{self.id}/hierarchy")
+            hierarchy = await self._account._request(
+                f"installation/{self.id}/hierarchy"
+            )
         except RequestError as err:
             if err.error_code == 403:
-                _LOGGER.warning("Access denied to installation hierarchy of %s. The user might not have access.", self.id)
+                _LOGGER.warning(
+                    "Access denied to installation hierarchy of %s. The user might not have access.",
+                    self.id,
+                )
                 self.circuits = []
                 return
             raise
@@ -179,7 +230,9 @@ class Installation(ZaptecBase):
         self.circuits = circuits
 
     async def state(self):
-        _LOGGER.debug("Polling state for %s installation (%s)", self.id, self._attrs.get('name'))
+        _LOGGER.debug(
+            "Polling state for %s installation (%s)", self.id, self._attrs.get("name")
+        )
         data = await self.installation_info()
         self.set_attributes(data)
 
@@ -211,7 +264,9 @@ class Installation(ZaptecBase):
                 from azure.servicebus.aio import ServiceBusClient
                 from azure.servicebus.exceptions import ServiceBusError
             except ImportError:
-                _LOGGER.warning("Azure Service bus is not available. Resolving to polling")
+                _LOGGER.warning(
+                    "Azure Service bus is not available. Resolving to polling"
+                )
                 # https://github.com/custom-components/zaptec/issues
                 return
 
@@ -221,21 +276,24 @@ class Installation(ZaptecBase):
             except RequestError as err:
                 if err.error_code != 403:
                     raise
-                _LOGGER.warning("Failed to get live stream info. Check if user have access in the zaptec portal")
+                _LOGGER.warning(
+                    "Failed to get live stream info. Check if user have access in the zaptec portal"
+                )
                 return
 
             # Open the connection
-            constr = (f'Endpoint=sb://{conf["Host"]}/;'
-                      f'SharedAccessKeyName={conf["Username"]};'
-                      f'SharedAccessKey={conf["Password"]}')
+            constr = (
+                f'Endpoint=sb://{conf["Host"]}/;'
+                f'SharedAccessKeyName={conf["Username"]};'
+                f'SharedAccessKey={conf["Password"]}'
+            )
             servicebus_client = ServiceBusClient.from_connection_string(conn_str=constr)
             _LOGGER.debug("Connecting to servicebus using %s", constr)
 
             self._stream_receiver = None
             async with servicebus_client:
                 receiver = servicebus_client.get_subscription_receiver(
-                    topic_name=conf["Topic"],
-                    subscription_name=conf["Subscription"]
+                    topic_name=conf["Topic"], subscription_name=conf["Subscription"]
                 )
                 # Store the receiver in order to close it and cancel this stream
                 self._stream_receiver = receiver
@@ -262,7 +320,9 @@ class Installation(ZaptecBase):
 
                             json_log = json_result.copy()
                             if "StateId" in json_log:
-                                json_log["StateId"] = f"{json_log['StateId']} ({self._account._obs_ids.get(json_log['StateId'])})"
+                                json_log[
+                                    "StateId"
+                                ] = f"{json_log['StateId']} ({self._account._obs_ids.get(json_log['StateId'])})"
                             _LOGGER.debug("---   Subscription: %s", json_log)
 
                             # Send result to account that will update the objects
@@ -273,7 +333,9 @@ class Installation(ZaptecBase):
                                 await cb(json_result)
 
                         except Exception as err:
-                            _LOGGER.exception("Couldn't process stream message: %s", err)
+                            _LOGGER.exception(
+                                "Couldn't process stream message: %s", err
+                            )
                             _LOGGER.debug("Message: %s", binmsg)
                             # Pass the message as the stream must continue.
 
@@ -309,12 +371,12 @@ class Installation(ZaptecBase):
             finally:
                 self._stream_task = None
 
-    #-----------------
+    # -----------------
     # API methods
-    #-----------------
+    # -----------------
 
     async def installation_info(self) -> TDict:
-        '''Raw request for installation data'''
+        """Raw request for installation data"""
 
         # Get the installation data
         data = await self._account._request(f"installation/{self.id}")
@@ -322,7 +384,7 @@ class Installation(ZaptecBase):
         # Remove data fields with excessive data, making it bigger than the
         # HA database appreciates for the size of attributes.
         # FIXME: SupportGroup is sub dict. This is not within the declared type
-        supportgroup = data.get('SupportGroup')
+        supportgroup = data.get("SupportGroup")
         if supportgroup is not None:
             if "LogoBase64" in supportgroup:
                 logo = supportgroup["LogoBase64"]
@@ -337,10 +399,11 @@ class Installation(ZaptecBase):
         """
         has_availablecurrent = "availableCurrent" in kwargs
         has_availablecurrentphases = all(
-            k in kwargs for k in (
-              "availableCurrentPhase1",
-              "availableCurrentPhase2",
-              "availableCurrentPhase3",
+            k in kwargs
+            for k in (
+                "availableCurrentPhase1",
+                "availableCurrentPhase2",
+                "availableCurrentPhase3",
             )
         )
 
@@ -351,8 +414,7 @@ class Installation(ZaptecBase):
             )
 
         data = await self._account._request(
-            f"installation/{self.id}/update",
-            method="post", data=kwargs
+            f"installation/{self.id}/update", method="post", data=kwargs
         )
         return data
 
@@ -366,10 +428,10 @@ class Installation(ZaptecBase):
             "IsRequiredAuthentication": required,
         }
         result = await self._account._request(
-            f"installation/{self.id}",
-            method="put", data=data
+            f"installation/{self.id}", method="put", data=data
         )
         return result
+
 
 class Circuit(ZaptecBase):
     """Represents a circuits"""
@@ -393,7 +455,7 @@ class Circuit(ZaptecBase):
         await self.state()
 
         chargers = []
-        for item in self._attrs['chargers']:
+        for item in self._attrs["chargers"]:
             _LOGGER.debug("      Charger %s", item["Id"])
             chg = Charger(item, self._account)
             self._account.register(item["Id"], chg)
@@ -403,16 +465,18 @@ class Circuit(ZaptecBase):
         self.chargers = chargers
 
     async def state(self):
-        _LOGGER.debug("Polling state for %s cicuit (%s)", self.id, self._attrs.get('name'))
+        _LOGGER.debug(
+            "Polling state for %s cicuit (%s)", self.id, self._attrs.get("name")
+        )
         data = await self.circuit_info()
         self.set_attributes(data)
 
-    #-----------------
+    # -----------------
     # API methods
-    #-----------------
+    # -----------------
 
     async def circuit_info(self) -> TDict:
-        '''Raw request for circuit data'''
+        """Raw request for circuit data"""
         data = await self._account._request(f"circuits/{self.id}")
         return data
 
@@ -423,16 +487,17 @@ class Charger(ZaptecBase):
     # Type conversions for the named attributes
     ATTR_TYPES = {
         "active": bool,
-        "is_authorization_required": lambda x: x in TRUTHY,
-        "is_online": lambda x: x in TRUTHY,
         "charge_current_installation_max_limit": float,
         "charger_max_current": float,
         "charger_min_current": float,
-        "completed_session": json.loads,
+        "completed_session": type_completed_session,
         "current_phase1": float,
         "current_phase2": float,
         "current_phase3": float,
+        "is_authorization_required": lambda x: x in TRUTHY,
+        "is_online": lambda x: x in TRUTHY,
         "permanent_cable_lock": lambda x: x in TRUTHY,
+        "signed_meter_value": type_ocmf,
         "total_charge_power": float,
         "voltage_phase1": float,
         "voltage_phase2": float,
@@ -444,21 +509,25 @@ class Charger(ZaptecBase):
 
         # Append the attr types that depends on self
         attr_types = self.ATTR_TYPES.copy()
-        attr_types.update({
-            "operating_mode": self.type_operation_mode,
-            "charger_operation_mode": self.type_operation_mode,
-        })
+        attr_types.update(
+            {
+                "operating_mode": self.type_operation_mode,
+                "charger_operation_mode": self.type_operation_mode,
+            }
+        )
         self.ATTR_TYPES = attr_types
 
     async def build(self) -> None:
-        '''Build the object'''
+        """Build the object"""
 
         # Don't update state at build, because the state and settings ids
         # is not loaded yet.
 
     async def state(self):
-        '''Update the charger state'''
-        _LOGGER.debug("Polling state for %s charger (%s)", self.id, self._attrs.get('name'))
+        """Update the charger state"""
+        _LOGGER.debug(
+            "Polling state for %s charger (%s)", self.id, self._attrs.get("name")
+        )
 
         try:
             # Get the main charger info
@@ -480,7 +549,7 @@ class Charger(ZaptecBase):
         # Get the state from the charger
         try:
             state = await self._account._request(f"chargers/{self.id}/state")
-            data = Account._state_to_attrs(state, 'StateId', self._account._obs_ids)
+            data = Account._state_to_attrs(state, "StateId", self._account._obs_ids)
             self.set_attributes(data)
         except RequestError as err:
             if err.error_code != 403:
@@ -495,7 +564,9 @@ class Charger(ZaptecBase):
         # Fetch some additional attributes from settings
         try:
             settings = await self._account._request(f"chargers/{self.id}/settings")
-            data = Account._state_to_attrs(settings.values(), 'SettingId', self._account._set_ids)
+            data = Account._state_to_attrs(
+                settings.values(), "SettingId", self._account._set_ids
+            )
             self.set_attributes(data)
         except RequestError as err:
             if err.error_code != 403:
@@ -510,11 +581,13 @@ class Charger(ZaptecBase):
 
                 for fm in firmware_info:
                     if fm["ChargerId"] == self.id:
-                        self.set_attributes({
-                            "current_firmware_version": fm["CurrentVersion"],
-                            "available_firmware_version": fm["AvailableVersion"],
-                            "firmware_update_to_date": fm["IsUpToDate"],
-                        })
+                        self.set_attributes(
+                            {
+                                "current_firmware_version": fm["CurrentVersion"],
+                                "available_firmware_version": fm["AvailableVersion"],
+                                "firmware_update_to_date": fm["IsUpToDate"],
+                            }
+                        )
             except RequestError as err:
                 if err.error_code != 403:
                     raise
@@ -529,50 +602,15 @@ class Charger(ZaptecBase):
         # FIXME: Missing validator (see validate)
         return data
 
-    async def update(self, data):
-        # FIXME: Is this in use or an experiment? Should it be removed from production code?
-
-        # https://api.zaptec.com/help/index.html#/Charger/post_api_chargers__id__update
-        # Not really sure this should be added as ppl might use it wrong
-        cmd = f"chargers/{self.id}/update"
-        default = {
-            # nullable: true
-            # Adjustable between 0 and 32A. If charge current is below the charger minimum charge current (usually 6A), no charge current will be allocated.
-            "maxChargeCurrent": 0,
-            # MaxPhaseinteger($int32) # Enum 1,3
-            "maxChargePhases": "",
-            # The minimum allocated charge current. If there is not enough current available to provide the
-            # chargers minimum current it will not be able to charge.
-            # Usually set to match the vehicle minimum current for charging (defaults to 6A)
-            "minChargeCurrent": None,
-            # Adjustable between 0 and 32A. If offline charge current is below the charger minimum charge current (usually 6A),
-            # no charge current will be allocated when offline.
-            # Offline current override should only be done in special cases where charging stations should not automatically optimize offline current.
-            # In most cases this setting should be set to -1 to allow ZapCloud to optimise offline current. If -1, offline current will be automatically allocated.
-            "offlineChargeCurrent": None,
-            # Phasesinteger($int32) ENUM
-            # 0 = None
-            # 1 = Phase_1
-            # 2 = Phase_2
-            # 4 = Phase_3
-            # 7 = All
-            "offlineChargePhase": None,
-            # nullable
-            # The interval in seconds for a charger to report meter values. Defaults to 900 seconds for Pro and 3600 seconds for Go
-            "meterValueInterval": None,
-        }
-
-        pass
-
-        # return await self._account.request(cmd, data=data, method="post")
-
     def type_operation_mode(self, v):
-        modes = {str(v): k for k, v in self._account._const["ChargerOperationModes"].items()}
+        modes = {
+            str(v): k for k, v in self._account._const["ChargerOperationModes"].items()
+        }
         return modes.get(str(v), str(v))
 
-    #-----------------
+    # -----------------
     # API methods
-    #-----------------
+    # -----------------
 
     async def charger_info(self) -> TDict:
         data = await self._account._request(f"chargers/{self.id}")
@@ -581,7 +619,7 @@ class Charger(ZaptecBase):
     async def command(self, command: str):
         """Send a command to the charger"""
 
-        if command == 'authorize_charge':
+        if command == "authorize_charge":
             return await self.authorize_charge()
 
         # Fetching the name from the const is perhaps not a good idea
@@ -592,8 +630,7 @@ class Charger(ZaptecBase):
 
         _LOGGER.debug("Command %s (%s)", command, cmdid)
         data = await self._account._request(
-            f"chargers/{self.id}/SendCommand/{cmdid}",
-            method="post"
+            f"chargers/{self.id}/SendCommand/{cmdid}", method="post"
         )
         return data
 
@@ -601,15 +638,14 @@ class Charger(ZaptecBase):
         """Set settings on the charger"""
 
         set_ids = self._account._set_ids
-        values = [{'id': set_ids.get(k), 'value': v} for k, v in settings.items()]
+        values = [{"id": set_ids.get(k), "value": v} for k, v in settings.items()]
 
-        if any(d for d in values if d['id'] is None):
+        if any(d for d in values if d["id"] is None):
             raise ValueError(f"Unknown setting '{settings}'")
 
         _LOGGER.debug("Settings %s", settings)
         data = await self._account._request(
-            f"chargers/{self.id}/settings",
-            method="post", data=values
+            f"chargers/{self.id}/settings", method="post", data=values
         )
         return data
 
@@ -631,8 +667,7 @@ class Charger(ZaptecBase):
     async def authorize_charge(self):
         _LOGGER.debug("Authorize charge")
         data = await self._account._request(
-            f"chargers/{self.id}/authorizecharge",
-            method="post"
+            f"chargers/{self.id}/authorizecharge", method="post"
         )
         return data
 
@@ -666,7 +701,7 @@ class Account:
             self._client = aiohttp.ClientSession()
 
     def register(self, id: str, data: ZaptecBase):
-        '''Register an object data with id'''
+        """Register an object data with id"""
         self.map[id] = data
 
     # =======================================================================
@@ -685,7 +720,9 @@ class Account:
                     data = await resp.json()
                     return True
                 else:
-                    raise AuthorizationError(f"Failed to authenticate. Got status {resp.status}")
+                    raise AuthorizationError(
+                        f"Failed to authenticate. Got status {resp.status}"
+                    )
         except aiohttp.ClientConnectorError as err:
             _LOGGER.exception("Bad things happend while trying to authenticate :(")
             raise
@@ -706,13 +743,16 @@ class Account:
                 self._token_info.update(data)
                 self._access_token = data.get("access_token")
             else:
-                raise AuthorizationError("Failed to refresh token, check your credentials.")
+                raise AuthorizationError(
+                    "Failed to refresh token, check your credentials."
+                )
 
     async def _request(self, url: str, method="get", data=None, iteration=1):
-
         def log_request():
             try:
-                _LOGGER.debug(f"@@@  REQUEST {method.upper()} to '{full_url}' length {len(data or '')}")
+                _LOGGER.debug(
+                    f"@@@  REQUEST {method.upper()} to '{full_url}' length {len(data or '')}"
+                )
                 if data:
                     _LOGGER.debug(f"     content {data}")
             except Exception as err:
@@ -722,7 +762,9 @@ class Account:
             try:
                 contents = await resp.read()
                 _LOGGER.debug(f"@@@  RESPONSE {resp.status} length {len(contents)}")
-                _LOGGER.debug(f"     header {dict((k, v) for k, v in resp.headers.items())}")
+                _LOGGER.debug(
+                    f"     header {dict((k, v) for k, v in resp.headers.items())}"
+                )
                 if not contents:
                     return
                 if resp.status != 200:
@@ -754,7 +796,9 @@ class Account:
                     if resp.status == 401:  # Unauthorized
                         await self._refresh_token()
                         if iteration > API_RETRIES:
-                            raise RequestRetryError(f"Request to {full_url} failed after {iteration} retries")
+                            raise RequestRetryError(
+                                f"Request to {full_url} failed after {iteration} retries"
+                            )
                         return await self._request(url, iteration=iteration + 1)
 
                     elif resp.status == 204:  # No content
@@ -779,7 +823,7 @@ class Account:
 
                         raise RequestError(
                             f"{method} request to {full_url} failed with status {resp.status}: {resp}",
-                            resp.status
+                            resp.status,
                         )
 
         except (asyncio.TimeoutError, aiohttp.ClientError) as err:
@@ -823,26 +867,29 @@ class Account:
         self.stand_alone_chargers = so_chargers
 
         if not self._const:
-
             # Get the API constants
             self._const = await self._request("constants")
 
             # Find the chargers device types
             device_types = set(
-                chg.device_type
-                for chg in self.map.values()
-                if isinstance(chg, Charger)
+                chg.device_type for chg in self.map.values() if isinstance(chg, Charger)
             )
 
             # Define the remaps
-            self._obs_ids = Account._get_remap(self._const, ["Observations", "ObservationIds"], device_types)
-            self._set_ids = Account._get_remap(self._const, ["Settings", "SettingIds"], device_types)
-            self._cmd_ids = Account._get_remap(self._const, ["Commands", "CommandIds"], device_types)
+            self._obs_ids = Account._get_remap(
+                self._const, ["Observations", "ObservationIds"], device_types
+            )
+            self._set_ids = Account._get_remap(
+                self._const, ["Settings", "SettingIds"], device_types
+            )
+            self._cmd_ids = Account._get_remap(
+                self._const, ["Commands", "CommandIds"], device_types
+            )
 
             # Commands can also be specified as lower case strings
-            self._cmd_ids.update({
-                to_under(k): v for k, v in self._cmd_ids.items() if isinstance(k, str)
-            })
+            self._cmd_ids.update(
+                {to_under(k): v for k, v in self._cmd_ids.items() if isinstance(k, str)}
+            )
 
         # Update the state on all chargers
         for data in self.map.values():
@@ -858,7 +905,7 @@ class Account:
         if cls_id is not None:
             klass = self.map.get(cls_id)
             if klass:
-                d = Account._state_to_attrs([data], 'StateId', self._obs_ids)
+                d = Account._state_to_attrs([data], "StateId", self._obs_ids)
                 klass.set_attributes(d)
             else:
                 _LOGGER.warning("Got update for unknown charger id %s", cls_id)
@@ -867,13 +914,13 @@ class Account:
 
     @staticmethod
     def _get_remap(const, wanted, device_types=None) -> dict:
-        ''' Parse the given zaptec constants record `const` and generate
-            a remap dict for the given `wanted` keys. If `device_types` is
-            specified, the entries for these device schemas will be merged
-            with the main remap dict.
-            Example:
-                _get_remap(const, ["Observations", "ObservationIds"], [4])
-        '''
+        """Parse the given zaptec constants record `const` and generate
+        a remap dict for the given `wanted` keys. If `device_types` is
+        specified, the entries for these device schemas will be merged
+        with the main remap dict.
+        Example:
+            _get_remap(const, ["Observations", "ObservationIds"], [4])
+        """
         ids = {}
         for k, v in const.items():
             if k in wanted:
@@ -893,11 +940,13 @@ class Account:
         return ids
 
     @staticmethod
-    def _state_to_attrs(data: Iterable[dict[str, str]], key: str, keydict: dict[str, str]):
-        ''' Convert a list of state data into a dict of attributes. `key`
-            is the key that specifies the attribute name. `keydict` is a
-            dict that maps the key value to an attribute name.
-        '''
+    def _state_to_attrs(
+        data: Iterable[dict[str, str]], key: str, keydict: dict[str, str]
+    ):
+        """Convert a list of state data into a dict of attributes. `key`
+        is the key that specifies the attribute name. `keydict` is a
+        dict that maps the key value to an attribute name.
+        """
         out = {}
         for item in data:
             skey = item.get(key)
@@ -908,7 +957,9 @@ class Account:
             if value is not MISSING:
                 kv = keydict.get(skey, f"{key} {skey}")
                 if kv in out:
-                    _LOGGER.debug("Duplicate key %s. Is '%s', new '%s'", kv, out[kv], value)
+                    _LOGGER.debug(
+                        "Duplicate key %s. Is '%s', new '%s'", kv, out[kv], value
+                    )
                 out[kv] = value
         return out
 
@@ -924,9 +975,7 @@ if __name__ == "__main__":
         acc = Account(
             username,
             password,
-            client=aiohttp.ClientSession(
-                connector=aiohttp.TCPConnector(ssl=False)
-            ),
+            client=aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=False)),
         )
 
         try:
