@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.6b230924
+
+* Fix timeout issue, sveinse/zaptec#19
+* Fix sensor state class on "signed_meter_value_kwh" making it possible to use
+  in HA energy, sveinse/zaptec#16
+
 ## 0.0.6b230918
 
 * Format with black
