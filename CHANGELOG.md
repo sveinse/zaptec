@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.0.6b231001
+
+* Add support for selecting which chargers to add to zaptec, sveinse/zaptec#5
+  by adding a second configuration screen.
+* Add support for adding an optional prefix to the device names,
+  sveinse/zaptec#4
+* Increased API timeout to 60 seconds, sveinse/zaptec#19
+* Updated UI messages/translations
+* Fixup general error handling
+
+API changes:
+* Added RequestConnectionError and RequestDataError, rename AuthorizationError
+  to AuthenticationError
+* Remove auto state retrieval from build(). When discovering the hierarchy
+  there's no need for all the extra information if the object is not going
+  to be used. Account.update_states() can be used to update the states for
+  all objects in the map.
+* Add support for pointing to the object's parent. Add optional installation=
+  argument to Charger(). Add optional circuit= argument to Charger().
+* Rename Account.installs to Account.installations for consistency
+* Add Account.unregister()
+* Cleanup error handling for Account.check_login() and add timeout
+* Fix error and timeout handling in Account._request(), and fix logging
+* Added Account.get_chargers() to get the list of chargers from the map
+
 ## 0.0.6b230924
 
 * Fix timeout issue, sveinse/zaptec#19

@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 NAME = "zaptec-dev"
-VERSION = "0.0.6b230924"
+VERSION = "0.0.6b231001"
 ISSUEURL = "https://github.com/sveinse/zaptec/issues"
 
 DOMAIN = "zaptec"
@@ -34,9 +34,12 @@ API_RETRIES = 5
 
 DEFAULT_SCAN_INTERVAL = 60
 
-API_TIMEOUT = 30
+API_TIMEOUT = 60
 
 REQUEST_REFRESH_DELAY = 0.3
+
+CONF_MANUAL_SELECT = "manual_select"
+CONF_CHARGERS = "chargers"
 
 
 class Missing:
