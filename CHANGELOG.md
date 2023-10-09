@@ -2,6 +2,8 @@
 
 ## 0.0.6b231009
 
+* Rename option "name" to "prefix" to avoid misunderstandings.
+
 Minor house-keeping tasks:
 * Minor FIXME cleanups
 * Simplify ZaptecUpdateCoordinator init
