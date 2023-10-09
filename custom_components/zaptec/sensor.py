@@ -166,7 +166,7 @@ CHARGER_ENTITIES: list[EntityDescription] = [
         device_class=SensorDeviceClass.ENERGY,
         icon="mdi:counter",
         native_unit_of_measurement=const.UnitOfEnergy.KILO_WATT_HOUR,
-        state_class=SensorStateClass.TOTAL,
+        state_class=SensorStateClass.TOTAL_INCREASING,
     ),
     ZapSensorEntityDescription(
         key="completed_session.Energy",
@@ -184,12 +184,9 @@ async def async_setup_entry(
     _LOGGER.debug("Setup sensors")
 
     coordinator: ZaptecUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
-    acc: Account = coordinator.account
 
     entities = ZaptecSensor.create_from_zaptec(
-        acc,
         coordinator,
-        entry,
         INSTALLATION_ENTITIES,
         CIRCUIT_ENTITIES,
         CHARGER_ENTITIES,

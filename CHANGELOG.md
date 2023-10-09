@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.0.6b231009
+
+* Rename option "name" to "prefix" to avoid misunderstandings.
+
+Minor house-keeping tasks:
+* Minor FIXME cleanups
+* Simplify ZaptecUpdateCoordinator init
+* Fix logging format for consistency
+* Simplify entity setup. Not require account or config entry.
+* Renamed ZaptecBaseEntry.create_from() to .create_from_descriptions()
+
 ## 0.0.6b231001
 
 * Add support for selecting which chargers to add to zaptec, sveinse/zaptec#5
@@ -124,7 +135,7 @@ Major refactoring
 * Currently binary sensor, button, number, sensor and switch
 * API: Added mc-nbfx decoder for stream messages
 * API: Refactored stream handling
-    
+
 User:
 * Zaptec devices (installation, circuit and charger) are named as set in Zaptec portal
 * More entities for each device. Avoid using attrs and templates.

@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 NAME = "zaptec-dev"
-VERSION = "0.0.6b231001"
+VERSION = "0.0.6b231009"
 ISSUEURL = "https://github.com/sveinse/zaptec/issues"
 
 DOMAIN = "zaptec"
@@ -40,6 +40,7 @@ REQUEST_REFRESH_DELAY = 0.3
 
 CONF_MANUAL_SELECT = "manual_select"
 CONF_CHARGERS = "chargers"
+CONF_PREFIX = "prefix"
 
 
 class Missing:
