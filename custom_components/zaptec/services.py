@@ -41,10 +41,9 @@ has_limit_current_schema = vol.Schema(
 
 
 async def async_setup_services(hass: HomeAssistant) -> None:
-    """Set up services for the Plex component."""
+    """Set up services for the Zaptec component."""
 
     _LOGGER.debug("Set up services")
-    acc: Account = hass.data[DOMAIN]["api"]
 
     async def service_handle_stop_charging(service_call: ServiceCall) -> None:
         _LOGGER.debug("Called stop charging")
@@ -83,19 +82,37 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         await charger.upgrade_firmware()
 
     async def service_handle_limit_current(service_call: ServiceCall) -> None:
-        _LOGGER.debug("Called set current limit")
         installation_id = service_call.data["installation_id"]
         available_current = service_call.data.get("available_current")
         available_current_phase1 = service_call.data.get("available_current_phase1")
         available_current_phase2 = service_call.data.get("available_current_phase2")
         available_current_phase3 = service_call.data.get("available_current_phase3")
-        installation: Installation = acc.map[installation_id]
-        await installation.set_limit_current(
-            availableCurrent=available_current,
-            availableCurrentPhase1=available_current_phase1,
-            availableCurrentPhase2=available_current_phase2,
-            availableCurrentPhase3=available_current_phase3,
+        _LOGGER.debug(
+            "Called set current limit for installation %s. Currents: all %s, phase 1 %s, phase 2 %s phase 3 %s",
+            installation_id,
+            available_current,
+            available_current_phase1,
+            available_current_phase2,
+            available_current_phase3,
         )
+        coordinator = get_coordinator(hass)
+
+        installation = next(
+            (x for x in coordinator.account.installations if x.id == installation_id),
+            None,
+        )
+
+        if installation is not None:
+            if available_current is not None:
+                await installation.set_limit_current(
+                    availableCurrent=available_current,
+                )
+            else:
+                await installation.set_limit_current(
+                    availableCurrentPhase1=available_current_phase1,
+                    availableCurrentPhase2=available_current_phase2,
+                    availableCurrentPhase3=available_current_phase3,
+                )
 
     # LIST OF SERVICES
     services: list[tuple[str, vol.Schema, TServiceHandler]] = [
@@ -111,3 +128,8 @@ async def async_setup_services(hass: HomeAssistant) -> None:
     # Register the services
     for name, schema, handler in services:
         hass.services.async_register(DOMAIN, name, handler, schema=schema)
+
+
+def get_coordinator(hass):
+    coordinators = hass.data[DOMAIN].values()
+    return next(iter(coordinators))

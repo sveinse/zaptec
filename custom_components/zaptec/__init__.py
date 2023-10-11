@@ -26,6 +26,7 @@ from homeassistant.helpers.update_coordinator import (
     UpdateFailed,
 )
 
+from .services import async_setup_services
 from .api import Account, Charger, Circuit, Installation, ZaptecApiError, ZaptecBase
 from .const import (
     API_TIMEOUT,
@@ -60,6 +61,11 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up integration."""
     if DOMAIN in hass.data:
         _LOGGER.info("Delete zaptec from your yaml")
+
+    hass.data.setdefault(DOMAIN, {})
+
+    await async_setup_services(hass)
+
     return True
 
 
@@ -75,7 +81,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
     await coordinator.async_config_entry_first_refresh()
 
-    hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = coordinator
 
     # Setup all platforms
