@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.0.6b231011
+
+* Add TOTAL_INCREASING to "total_charger_power_session", sveinse/zaptec#23
+* Fix regression of missing services, sveinse/zaptec#24
+* Refactor services in order to make them easier to use with the service call
+  UIs 
+
 ## 0.0.6b231009
 
 * Rename option "name" to "prefix" to avoid misunderstandings.
