@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.0.6b231015
+
+* API: Add support for using provided request client
+* API: Refactor Account._request() to more resiliant against API timeouts
+  and error by introducing retry mechanisms. sveinse/zaptec#19
+* API: Implement Account._retry_request() as retry and timeout manager for the
+  requests.
+* API: Add retry on getting session keys
+* API: Fix Installation.set_limit_current() bug, sveinse/zaptec#27
+* Fix coordinator update when any services are called
+
 ## 0.0.6b231011
 
 * Add TOTAL_INCREASING to "total_charger_power_session", sveinse/zaptec#23
