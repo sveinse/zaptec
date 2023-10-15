@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 NAME = "zaptec-dev"
-VERSION = "0.0.6b231011"
+VERSION = "0.0.6b231015"
 ISSUEURL = "https://github.com/sveinse/zaptec/issues"
 
 DOMAIN = "zaptec"
@@ -31,10 +31,9 @@ API_URL = "https://api.zaptec.com/api/"
 CONST_URL = "https://api.zaptec.com/api/constants"
 
 API_RETRIES = 5
+API_TIMEOUT = 10
 
 DEFAULT_SCAN_INTERVAL = 60
-
-API_TIMEOUT = 60
 
 REQUEST_REFRESH_DELAY = 0.3
 
