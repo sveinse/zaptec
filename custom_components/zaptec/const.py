@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 NAME = "zaptec-dev"
-VERSION = "0.0.6b231015"
+VERSION = "0.7.0b231111"
 ISSUEURL = "https://github.com/sveinse/zaptec/issues"
 
 DOMAIN = "zaptec"

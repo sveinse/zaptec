@@ -3,11 +3,11 @@
         "step": {
             "user": {
                 "title": "Zaptec setup",
-                "description": "Add your Zaptec Portal login details.\n\n(EXPERIMENTAL) The optional prefix will add the prefix to all devices. Note that it is generally better to rename the device names in HA than adding a prefix.",
+                "description": "Add your Zaptec Portal login details.\n\nThe optional prefix will add the prefix to all devices. Note that it is generally better to rename the device names in HA than adding a prefix.",
                 "data": {
                     "username": "Username",
                     "password": "Password",
-                    "prefix": "Optional prefix (EXPERIMENTAL)",
+                    "prefix": "Optional prefix",
                     "scan_interval": "Scan interval",
                     "manual_select": "Manually select chargers. Next screen will select the chargers to add."
                 }
