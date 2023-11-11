@@ -1,38 +1,24 @@
-## **DEVELOPMENT** Zaptec charger custom component for home assistant
-
-[![GitHub Release][releases-shield]][releases]
-[![GitHub Activity][commits-shield]][commits]
-[![License][license-shield]][license]
+## **DEVELOPMENT** Zaptec EV charger component for Home Assistant
 
 [![hacs][hacsbadge]][hacs]
-[![Project Maintenance][maintenance-shield]][user_profile]
-[![BuyMeCoffee][buymecoffeebadge]][buymecoffee]
+[![GitHub Release][releases-shield]][releases]
+[![License][license-shield]][license]
+![Downloads][downloads-shield]
 
-[![Discord][discord-shield]][discord]
-[![Community Forum][forum-shield]][forum]
+[![Project Maintenance][hellowlol-maintenance-shield]][hellowlol-profile]
+[![BuyMeCoffee][buymecoffeebadge]][hellowlol-buymecoffee]
 
+[![Project Maintenance][sveinse-maintenance-shield]][sveinse-profile]
+[![BuyMeCoffee][buymecoffeebadge]][sveinse-buymecoffee]
 
-# Features
+# :bangbang: NEWS
 
-* Integration for Home assistant for Zaptec Chargers through the Zaptec
-  cloud API
-* Provides start & stop of charging the EV
-* Supports basic (native authentication)
-* Sensors and status, current, energy
-* Adjustable charging currents
+:warning: This fork has now been integrated into Official Zaptec
+release 0.7.0, see [Zaptec v0.7.0 release](https://github.com/custom-components/zaptec/releases/tag/v0.7.0).
+Please install this version. Any issues should also be filed in
+[Zaptec issues](https://github.com/custom-components/zaptec/issues)
 
-To use this component, a user with access to
-[Zaptec Portal](https://portal.zaptec.com/) is needed.
-
-Confirmed to work with
-
-* Zaptec Go
-
-> *) Send a message to @sveinse if you have been able to use any other chargers
-in order to put it on the list.
-
-
-## :warning: Development version
+# Development version
 
 **:information_source: IMPORTANT!** This is https://github.com/sveinse/zaptec
 which is @sveinse fork of upstream/official zaptec integration at
@@ -40,9 +26,48 @@ https://github.com/custom-components/zaptec.
 This is under active development, and any feedback on your experience using it
 is very appreciated.
 
-**:warning:  WARNING!** This is a major refactor of the upstream zaptec
-integration. The names and device setup has been significantly refactored.
-Installing this version will break your existing automations and templates.
+
+# Features
+
+* Integration for Home assistant for Zaptec Chargers through the Zaptec
+  portal/cloud API
+* Provides start & stop of charging the EV
+* Supports basic authentication (*native* authentication)
+* Sensors for status, current, energy
+* Adjustable charging currents, all or individual three phase
+
+To use this component, a user with access to
+[Zaptec Portal](https://portal.zaptec.com/) is needed.
+
+### Compatibility
+
+Confirmed to work with
+
+* Zaptec Go
+
+>  :information_source: Please reach out if you have been able to make this component work with
+other Zaptec chargers.
+
+
+## :bangbang: Breaking change
+
+> **:warning: This release will BREAK your current automations**
+
+The Zaptec integration has been completely refactored. The way to interact
+with you Zaptec charger from Home Assistant has been changed. The Zaptec data
+is now represented as proper entities (like sensors, numbers, buttons, etc).
+This makes logging and interactions much simpler and it needs no additional
+templates.
+
+The integration is set up as one devices for each of the detected Zaptec
+devices. Most users will have three devices: An installation device, a circuit
+and a charger and each provide different functionality.
+
+The previous zaptec entities were named `zaptec_charger_<uuid>`,
+`zaptec_installation_<uuid>` and `zaptec_circute_<uuid>`. The full data were
+available as attributes in these objects, and they could be retried with
+the aid of manual templates. The same objects exists, but under the names
+`<name> Installer`, `<name> Charger` and `<name> Circuit`.
 
 
 ## Beta testing
@@ -60,24 +85,6 @@ In particular the following items is of particular interest:
 
 In some cases it would help debugging to have access to the diagnostics info.
 Please see the "Diagnostics" section below in how to generate if it is requested.
-
-
-## What's new in this Beta
-
-The zaptec integration has been completely refactored and the way to interact
-with it in Home Assistant has changed. The zaptec data is now represented as
-proper entities (like sensors, numbers, buttons, etc). This makes logging and
-interactions much simpler and it needs no additional templates.
-
-The integration is set up as one devices for each of the detected Zaptec
-devices. Most users will have three devices: An installation device, a circuit
-and a charger and each provide different functionality.
-
-The previous zaptec entities were named `zaptec_charger_<uuid>`,
-`zaptec_installation_<uuid>` and `zaptec_circute_<uuid>`. The full data were
-available as attributes in these objects, and they could be retried with
-the aid of manual templates. The same objects exists, but under the names
-`<name> Installer`, `<name> Charger` and `<name> Circuit`.
 
 
 # Installation
@@ -219,7 +226,7 @@ template:
        unit_of_measurement: '%Humidity'
        state: >
         {{ state_attr('binary_sensor.X_charger', 'humidity') | round(0) }}
-      # Replace "X_charger" with actual entity name
+       # Replace "X_charger" with actual entity name
 ```
 
 The list of attributes can be found by looking at the attributes for the
@@ -237,21 +244,17 @@ not contain any personal information. Please double check that the file
 doesn't contain any personal information before sharing.
 
 
-[zaptec]: https://github.com/custom-components/zaptec
-[buymecoffee]: https://www.buymeacoffee.com/hellowlol1
-[buymecoffeebadge]: https://img.shields.io/badge/buy%20me%20a%20coffee-donate-yellow.svg?style=for-the-badge
-[commits-shield]: https://img.shields.io/github/commit-activity/y/custom-components/zaptec.svg?style=for-the-badge
-[commits]: https://github.com/custom-components/zaptec/commits/master
+[hellowlol-buymecoffee]: https://www.buymeacoffee.com/hellowlol1
+[sveinse-buymecoffee]: https://www.buymeacoffee.com/sveinse
+[buymecoffeebadge]: https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png
 [hacs]: https://hacs.xyz
-[hacsbadge]: https://img.shields.io/badge/HACS-Default-blue.svg?style=for-the-badge
-[discord]: https://discord.gg/Qa5fW2R
-[discord-shield]: https://img.shields.io/discord/330944238910963714.svg?style=for-the-badge
-[exampleimg]: example.png
-[forum-shield]: https://img.shields.io/badge/community-forum-brightgreen.svg?style=for-the-badge
-[forum]: https://community.home-assistant.io/
+[hacsbadge]: https://img.shields.io/badge/HACS-Default-blue.svg
 [license]: https://github.com/custom-components/zaptec/blob/master/LICENSE
-[license-shield]: https://img.shields.io/github/license/custom-components/zaptec.svg?style=for-the-badge
-[maintenance-shield]: https://img.shields.io/badge/maintainer-Hellowlol-blue.svg?style=for-the-badge
-[releases-shield]: https://img.shields.io/github/release/custom-components/zaptec.svg?style=for-the-badge
+[license-shield]: https://img.shields.io/github/license/custom-components/zaptec.svg
+[hellowlol-maintenance-shield]: https://img.shields.io/badge/maintainer-Hellowlol-blue.svg
+[sveinse-maintenance-shield]: https://img.shields.io/badge/maintainer-sveinse-blue.svg
+[releases-shield]: https://img.shields.io/github/release/custom-components/zaptec.svg
 [releases]: https://github.com/custom-components/zaptec/releases
-[user_profile]: https://github.com/hellowlol
+[downloads-shield]: https://img.shields.io/github/downloads/custom-components/zaptec/total.svg
+[hellowlol-profile]: https://github.com/hellowlol
+[sveinse-profile]: https://github.com/sveinse

@@ -1,6 +1,6 @@
 {
   "domain": "zaptec",
-  "name": "zaptec-dev",
+  "name": "Zaptec EV charger DEVELOPMENT",
   "documentation": "https://github.com/sveinse/zaptec",
   "dependencies": [],
   "config_flow": true,
@@ -8,6 +8,7 @@
     "hellowlol",
     "sveinse"
   ],
+  "iot_class": "cloud_polling",
   "requirements": ["azure-servicebus", "pydantic"],
-  "version": "0.0.6b231015"
+  "version": "0.7.0b231111"
 }
