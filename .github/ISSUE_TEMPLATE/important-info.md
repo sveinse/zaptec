@@ -1,6 +1,6 @@
 ---
-name: Development Zaptec
-about: Do not use
+name: Important info
+about: Zaptec development
 title: ''
 labels: ''
 assignees: ''
