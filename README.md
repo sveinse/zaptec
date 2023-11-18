@@ -1,4 +1,4 @@
-## Zaptec EV charger component for Home Assistant
+## DEVELOPMENT Zaptec EV charger component for Home Assistant
 
 [![hacs][hacsbadge]][hacs]
 [![GitHub Release][releases-shield]][releases]

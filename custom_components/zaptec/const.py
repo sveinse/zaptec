@@ -1,9 +1,9 @@
 """Zaptec integration constants."""
 from __future__ import annotations
 
-NAME = "zaptec"
-VERSION = "0.7.0"
-ISSUEURL = "https://github.com/custom-components/zaptec/issues"
+NAME = "zaptec-dev"
+VERSION = "0.7.0b231118"
+ISSUEURL = "https://github.com/sveinse/zaptec/issues"
 
 DOMAIN = "zaptec"
 MANUFACTURER = "Zaptec"
