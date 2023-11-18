@@ -1,4 +1,4 @@
-## DEVELOPMENT Zaptec EV charger component for Home Assistant
+## **DEVELOPMENT** Zaptec EV charger component for Home Assistant
 
 [![hacs][hacsbadge]][hacs]
 [![GitHub Release][releases-shield]][releases]
@@ -10,6 +10,21 @@
 
 [![Project Maintenance][sveinse-maintenance-shield]][sveinse-profile]
 [![BuyMeCoffee][buymecoffeebadge]][sveinse-buymecoffee]
+
+# :bangbang: NEWS
+
+:warning: This fork has now been integrated into Official Zaptec
+release 0.7.0, see [Zaptec v0.7.0 release](https://github.com/custom-components/zaptec/releases/tag/v0.7.0).
+Please install this version. Any issues should also be filed in
+[Zaptec issues](https://github.com/custom-components/zaptec/issues)
+
+# Development version
+
+**:information_source: IMPORTANT!** This is https://github.com/sveinse/zaptec
+which is @sveinse fork of upstream/official zaptec integration at
+https://github.com/custom-components/zaptec.
+This is under active development, and any feedback on your experience using it
+is very appreciated.
 
 
 # Features
@@ -55,13 +70,40 @@ the aid of manual templates. The same objects exists, but under the names
 `<name> Installer`, `<name> Charger` and `<name> Circuit`.
 
 
+## Beta testing
+
+The component is currently under beta testing. Any feedback on problems,
+improvements or joy can be given at: https://github.com/sveinse/zaptec/issues
+
+In particular the following items is of particular interest:
+
+* Is everything working as it should? Any error messages?
+* Does your autpmations and operation of the charger work with your use?
+* Any missing entities (sensors, buttons, switches)?
+* Are the new entity names ok?
+* What is missing from documentation?
+
+In some cases it would help debugging to have access to the diagnostics info.
+Please see the "Diagnostics" section below in how to generate if it is requested.
+
+
 # Installation
 
-This integration is available in HACS (Home Assistant Community Store).
+This repo can be installed manually into Home Assistant by manually adding the
+URL in HACS.
 
-Just search for Zaptec in the HACS list or click the badge below:
+**:information_source: NOTE!** Existing `zaptec` installations MUST be
+uninstalled first. Installing this repo will clash with existing integration
+already installed.
 
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=custom-components&repository=zaptec)
+### Step 1
+![Setup1](/img/hacs_custom.png)
+
+### Step 2
+![Setup2](/img/hacs_zaptec_custom.png)
+
+### Step 3
+![Setup3](/img/hacs_zaptec_dev.png)
 
 
 # Usage
